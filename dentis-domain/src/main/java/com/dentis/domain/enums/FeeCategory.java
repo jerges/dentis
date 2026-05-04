@@ -1,0 +1,17 @@
+package com.dentis.domain.enums;
+
+public enum FeeCategory {
+    LABORATORY,
+    SUPPLIES,
+    ORTHODONTICS,
+    SURGERY,
+    GENERAL_DENTISTRY,
+    ENDODONTICS,
+    PERIODONTICS,
+    IMPLANTOLOGY,
+    PEDIATRIC_DENTISTRY,
+    IMAGING,
+    SPECIALTY,
+    ADMINISTRATIVE,
+    OTHER
+}
