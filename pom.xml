@@ -19,6 +19,7 @@
         <module>dentis-notification</module>
         <module>dentis-clinic</module>
         <module>dentis-api</module>
+        
     </modules>
 
     <properties>
