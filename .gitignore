@@ -1,0 +1,4 @@
+/.idea/
+dentis-web/node_modules/
+dentis-web/dist/
+dentis-common/target/

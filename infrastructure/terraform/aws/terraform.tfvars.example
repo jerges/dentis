@@ -1,0 +1,48 @@
+# ============================================================
+# DENTIS - AWS Terraform Variables
+# Copia este archivo como terraform.tfvars y completa los valores
+# NUNCA commits terraform.tfvars al repositorio (está en .gitignore)
+# ============================================================
+
+# ─── AWS ────────────────────────────────────────────────────
+aws_region  = "us-east-1"
+environment = "prod"
+
+# ─── Networking ─────────────────────────────────────────────
+vpc_cidr             = "10.0.0.0/16"
+availability_zones   = ["us-east-1a", "us-east-1b"]
+public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
+private_subnet_cidrs = ["10.0.11.0/24", "10.0.12.0/24"]
+
+# ─── Application ────────────────────────────────────────────
+app_name          = "dentis"
+app_port          = 8080
+app_cpu           = 512    # 0.5 vCPU  — aumenta a 1024 si necesitas más
+app_memory        = 1024   # 1 GB      — aumenta a 2048 para prod real
+app_desired_count = 1
+app_image_tag     = "latest"
+
+# ─── Database (RDS PostgreSQL) ───────────────────────────────
+db_instance_class    = "db.t3.micro"   # db.t3.small para prod real
+db_name              = "dentis_db"
+db_allocated_storage = 20
+db_multi_az          = false           # true para alta disponibilidad en prod
+
+# ─── Secrets — COMPLETAR CON VALORES REALES ─────────────────
+# Recomendado: usar variables de entorno TF_VAR_* en CI/CD
+# en lugar de escribirlos directamente aquí
+
+# db_username = "REPLACE_WITH_DB_USERNAME"
+# db_password = "REPLACE_WITH_STRONG_DB_PASSWORD"
+# jwt_secret  = "REPLACE_WITH_JWT_SECRET_MIN_32_CHARS"
+# mail_username = "REPLACE_WITH_SMTP_EMAIL"
+# mail_password = "REPLACE_WITH_SMTP_PASSWORD"
+
+# ─── HTTPS (opcional) ────────────────────────────────────────
+# Crea el certificado en AWS Certificate Manager primero
+# certificate_arn = "arn:aws:acm:us-east-1:ACCOUNT_ID:certificate/CERT_ID"
+# domain_name     = "dentis.tudominio.com"
+
+# ─── Email ──────────────────────────────────────────────────
+mail_host = "smtp.gmail.com"
+mail_port = 587

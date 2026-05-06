@@ -1,0 +1,25 @@
+FROM node:20-alpine AS builder
+WORKDIR /workspace/dentis-web
+
+COPY dentis-web/package*.json ./
+RUN npm ci
+
+COPY dentis-web/ ./
+RUN npm run build:prod
+
+FROM nginx:1.27 AS runtime
+
+# Copy nginx config template
+COPY infrastructure/docker/nginx.dev.conf /etc/nginx/conf.d/default.conf.tpl
+
+# Copy built Angular app
+COPY --from=builder /workspace/dentis-web/dist/dentis-web/browser /usr/share/nginx/html
+
+# Copy and make entrypoint executable (perms set in COPY)
+COPY --chmod=755 infrastructure/docker/docker-entrypoint.sh /docker-entrypoint.sh
+
+RUN sed -i 's/\r$//' /docker-entrypoint.sh
+
+EXPOSE 80
+
+ENTRYPOINT ["/docker-entrypoint.sh"]

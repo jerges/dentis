@@ -1,0 +1,46 @@
+# ============================================================
+# DENTIS - Azure Terraform Variables
+# Copia este archivo como terraform.tfvars y completa los valores
+# NUNCA commits terraform.tfvars al repositorio (está en .gitignore)
+# ============================================================
+
+# ─── Azure Identity (preferible via variables de entorno ARM_*) ──────────────
+# azure_subscription_id = "REPLACE_WITH_YOUR_SUBSCRIPTION_ID"
+# azure_tenant_id       = "REPLACE_WITH_YOUR_TENANT_ID"
+# azure_client_id       = "REPLACE_WITH_YOUR_SERVICE_PRINCIPAL_CLIENT_ID"
+# azure_client_secret   = "REPLACE_WITH_YOUR_SERVICE_PRINCIPAL_SECRET"
+
+# ─── General ────────────────────────────────────────────────
+location    = "East US"          # brazilsouth para más cercano a Venezuela
+environment = "prod"
+app_name    = "dentis"
+
+# ─── Networking ─────────────────────────────────────────────
+vnet_address_space = ["10.0.0.0/16"]
+app_subnet_cidr    = "10.0.1.0/24"
+db_subnet_cidr     = "10.0.2.0/24"
+
+# ─── Application ────────────────────────────────────────────
+app_port         = 8080
+app_cpu          = 0.5     # 0.5 vCPU
+app_memory       = "1Gi"
+app_min_replicas = 1
+app_max_replicas = 3
+app_image_tag    = "latest"
+
+# ─── Database ───────────────────────────────────────────────
+db_sku        = "B_Standard_B1ms"  # Standard_D2s_v3 para prod real
+db_storage_mb = 32768
+db_name       = "dentis_db"
+db_version    = "16"
+
+# ─── Secrets — COMPLETAR CON VALORES REALES ─────────────────
+# db_admin_login    = "REPLACE_WITH_DB_ADMIN_LOGIN"
+# db_admin_password = "REPLACE_WITH_STRONG_DB_PASSWORD"
+# jwt_secret        = "REPLACE_WITH_JWT_SECRET_MIN_32_CHARS"
+# mail_username     = "REPLACE_WITH_SMTP_EMAIL"
+# mail_password     = "REPLACE_WITH_SMTP_APP_PASSWORD"
+
+# ─── Email ──────────────────────────────────────────────────
+mail_host = "smtp.gmail.com"
+mail_port = 587
