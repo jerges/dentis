@@ -1,0 +1,12 @@
+/Users/pw-jbello/developer/workspace/adakadavra/dentis/dentis-clinic/src/main/java/com/adakadavra/dentis/clinic/application/dto/ClinicResponse.java
+/Users/pw-jbello/developer/workspace/adakadavra/dentis/dentis-clinic/src/main/java/com/adakadavra/dentis/clinic/application/dto/ClinicUserResponse.java
+/Users/pw-jbello/developer/workspace/adakadavra/dentis/dentis-clinic/src/main/java/com/adakadavra/dentis/clinic/application/dto/CreateClinicRequest.java
+/Users/pw-jbello/developer/workspace/adakadavra/dentis/dentis-clinic/src/main/java/com/adakadavra/dentis/clinic/application/dto/UpdateClinicRequest.java
+/Users/pw-jbello/developer/workspace/adakadavra/dentis/dentis-clinic/src/main/java/com/adakadavra/dentis/clinic/application/usecase/ClinicUseCase.java
+/Users/pw-jbello/developer/workspace/adakadavra/dentis/dentis-clinic/src/main/java/com/adakadavra/dentis/clinic/domain/model/Clinic.java
+/Users/pw-jbello/developer/workspace/adakadavra/dentis/dentis-clinic/src/main/java/com/adakadavra/dentis/clinic/domain/repository/ClinicRepository.java
+/Users/pw-jbello/developer/workspace/adakadavra/dentis/dentis-clinic/src/main/java/com/adakadavra/dentis/clinic/domain/service/ClinicService.java
+/Users/pw-jbello/developer/workspace/adakadavra/dentis/dentis-clinic/src/main/java/com/adakadavra/dentis/clinic/infrastructure/persistence/entity/ClinicEntity.java
+/Users/pw-jbello/developer/workspace/adakadavra/dentis/dentis-clinic/src/main/java/com/adakadavra/dentis/clinic/infrastructure/persistence/mapper/ClinicEntityMapper.java
+/Users/pw-jbello/developer/workspace/adakadavra/dentis/dentis-clinic/src/main/java/com/adakadavra/dentis/clinic/infrastructure/persistence/repository/ClinicJpaRepository.java
+/Users/pw-jbello/developer/workspace/adakadavra/dentis/dentis-clinic/src/main/java/com/adakadavra/dentis/clinic/infrastructure/persistence/repository/ClinicRepositoryAdapter.java
