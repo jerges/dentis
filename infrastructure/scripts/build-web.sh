@@ -19,10 +19,8 @@ WEB_PORT="${WEB_PORT:-80}"
 export AWS_PROFILE="$AWS_PROFILE_NAME"
 export AWS_DEFAULT_PROFILE="$AWS_PROFILE_NAME"
 
-# Bypass Zscaler corporate proxy for AWS traffic
-unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy
-export NO_PROXY="localhost,127.0.0.1,::1,.amazonaws.com,.aws.amazon.com"
-export no_proxy="$NO_PROXY"
+# Ensure AWS/Docker commands do not inherit shell proxy settings.
+unset HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy
 
 for cmd in aws docker ssh terraform; do
   command -v "$cmd" >/dev/null 2>&1 || { echo "[ERROR] Required command not found: $cmd" >&2; exit 1; }

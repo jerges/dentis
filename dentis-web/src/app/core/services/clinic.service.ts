@@ -6,8 +6,10 @@ import { ApiResponse, PageResponse } from '../models/api.model';
 import {
   Clinic,
   ClinicUser,
+  CreateGlobalClinicUserRequest,
   CreateClinicRequest,
   CreateClinicUserRequest,
+  UpdateClinicUserRequest,
   UpdateClinicRequest
 } from '../models/clinic.model';
 
@@ -47,6 +49,14 @@ export class ClinicService {
 
   createClinicUser(clinicId: string, request: CreateClinicUserRequest): Observable<ApiResponse<ClinicUser>> {
     return this.http.post<ApiResponse<ClinicUser>>(`${this.apiUrl}/${clinicId}/users`, request);
+  }
+
+  createGlobalClinicUser(request: CreateGlobalClinicUserRequest): Observable<ApiResponse<ClinicUser>> {
+    return this.http.post<ApiResponse<ClinicUser>>(`${this.apiUrl}/users`, request);
+  }
+
+  updateClinicUser(clinicId: string, userId: string, request: UpdateClinicUserRequest): Observable<ApiResponse<ClinicUser>> {
+    return this.http.put<ApiResponse<ClinicUser>>(`${this.apiUrl}/${clinicId}/users/${userId}`, request);
   }
 
   deactivateClinicUser(clinicId: string, userId: string): Observable<ApiResponse<null>> {

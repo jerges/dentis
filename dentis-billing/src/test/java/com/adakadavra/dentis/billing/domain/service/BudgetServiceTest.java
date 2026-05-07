@@ -35,16 +35,14 @@ class BudgetServiceTest {
     private BudgetService budgetService;
 
     private UUID tariffId;
-    private UUID patientId;
-    private BudgetItem sampleItem;
     private Budget sampleBudget;
 
     @BeforeEach
     void setUp() {
         tariffId = UUID.randomUUID();
-        patientId = UUID.randomUUID();
+        UUID patientId = UUID.randomUUID();
 
-        sampleItem = BudgetItem.builder()
+        BudgetItem sampleItem = BudgetItem.builder()
                 .id(UUID.randomUUID())
                 .tariffId(tariffId)
                 .description("Dental cleaning")
@@ -68,8 +66,8 @@ class BudgetServiceTest {
     class CreateBudget {
 
         @Test
-        @DisplayName("should create budget in DRAFT status")
-        void shouldCreateBudgetAsDraft() {
+        @DisplayName("should be created in DRAFT status")
+        void shouldBeCreatedAsDraft() {
             Tariff tariff = Tariff.builder().id(tariffId).active(true).build();
             when(tariffRepository.findById(tariffId)).thenReturn(Optional.of(tariff));
             when(budgetRepository.save(any())).thenReturn(sampleBudget);
@@ -81,8 +79,8 @@ class BudgetServiceTest {
         }
 
         @Test
-        @DisplayName("should throw when budget has no items")
-        void shouldThrowWhenBudgetIsEmpty() {
+        @DisplayName("should be rejected when budget has no items")
+        void shouldBeRejectedWhenBudgetIsEmpty() {
             Budget emptyBudget = sampleBudget.withItems(List.of());
 
             assertThatThrownBy(() -> budgetService.createBudget(emptyBudget))
@@ -96,8 +94,8 @@ class BudgetServiceTest {
     class GetBudgetSummary {
 
         @Test
-        @DisplayName("should return PAID status when balance is zero")
-        void shouldReturnPaidStatus() {
+        @DisplayName("should be PAID when balance is zero")
+        void shouldBePaidWhenBalanceIsZero() {
             UUID budgetId = sampleBudget.getId();
             when(budgetRepository.findById(budgetId)).thenReturn(Optional.of(sampleBudget));
             when(paymentRepository.sumPaymentsByBudgetId(budgetId)).thenReturn(new BigDecimal("50.00"));
@@ -109,8 +107,8 @@ class BudgetServiceTest {
         }
 
         @Test
-        @DisplayName("should return PARTIALLY_PAID when some amount is paid")
-        void shouldReturnPartiallyPaidStatus() {
+        @DisplayName("should be PARTIALLY_PAID when some amount is paid")
+        void shouldBePartiallyPaidWhenSomeAmountIsPaid() {
             UUID budgetId = sampleBudget.getId();
             when(budgetRepository.findById(budgetId)).thenReturn(Optional.of(sampleBudget));
             when(paymentRepository.sumPaymentsByBudgetId(budgetId)).thenReturn(new BigDecimal("25.00"));
@@ -122,8 +120,8 @@ class BudgetServiceTest {
         }
 
         @Test
-        @DisplayName("should return PENDING when no payments recorded")
-        void shouldReturnPendingStatus() {
+        @DisplayName("should be PENDING when no payments are recorded")
+        void shouldBePendingWhenNoPaymentsAreRecorded() {
             UUID budgetId = sampleBudget.getId();
             when(budgetRepository.findById(budgetId)).thenReturn(Optional.of(sampleBudget));
             when(paymentRepository.sumPaymentsByBudgetId(budgetId)).thenReturn(BigDecimal.ZERO);

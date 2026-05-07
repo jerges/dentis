@@ -12,7 +12,13 @@ export const APP_NAV_ITEMS: AppNavItem[] = [
     label: 'Admin Clínicas',
     icon: 'domain',
     route: '/clinics',
-    roles: ['SUPER_ADMIN', 'ADMIN']
+    roles: ['SUPER_ADMIN']
+  },
+  {
+    label: 'Mi Clínica',
+    icon: 'groups',
+    route: '/my-clinic/users',
+    roles: ['ADMIN']
   },
   { label: 'Dashboard', icon: 'dashboard', route: '/dashboard' },
   { label: 'Pacientes', icon: 'people', route: '/patients' },

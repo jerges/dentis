@@ -1,8 +1,20 @@
 export interface ApiResponse<T> {
   success: boolean;
   data: T;
-  error?: { code: string; message: string };
+  error?: ApiError;
   timestamp: string;
+}
+
+export interface ApiFieldError {
+  field?: string;
+  message?: string;
+}
+
+export interface ApiError {
+  code?: string;
+  message?: string;
+  title?: string;
+  fieldErrors?: ApiFieldError[];
 }
 
 export interface PageResponse<T> {

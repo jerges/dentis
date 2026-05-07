@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ClinicService } from '../../../core/services/clinic.service';
+import { BackendHealthService } from '../../../core/services/backend-health.service';
 import { Clinic } from '../../../core/models/clinic.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
@@ -33,8 +34,22 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
   template: `
     <div class="page-container">
       <app-page-header title="Administración de Clínicas" subtitle="Gestiona clínicas y usuarios por clínica">
+        <button
+          mat-icon-button
+          type="button"
+          class="health-status"
+          [matTooltip]="backendStatusTooltip"
+          (click)="checkBackendStatus()"
+          aria-label="Estado del backend">
+          <mat-icon [class.health-ok]="backendStatus === 'up'" [class.health-down]="backendStatus === 'down'">
+            {{ backendStatusIcon }}
+          </mat-icon>
+        </button>
         <button mat-raised-button color="primary" routerLink="/clinics/new">
           <mat-icon>add_business</mat-icon> Nueva Clínica
+        </button>
+        <button mat-raised-button color="accent" routerLink="/clinics/new-super-admin">
+          <mat-icon>admin_panel_settings</mat-icon> Nuevo Super Admin
         </button>
       </app-page-header>
 
@@ -72,12 +87,13 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
 
             <ng-container matColumnDef="actions">
               <th mat-header-cell *matHeaderCellDef>Acciones</th>
-              <td mat-cell *matCellDef="let c">
+              <td mat-cell *matCellDef="let c" class="actions-cell">
                 <button mat-icon-button [routerLink]="['/clinics', c.id, 'edit']" matTooltip="Editar clínica">
                   <mat-icon>edit</mat-icon>
                 </button>
-                <button mat-icon-button [routerLink]="['/clinics', c.id, 'users']" matTooltip="Usuarios de la clínica">
+                <button mat-stroked-button [routerLink]="['/clinics', c.id, 'users']" matTooltip="Gestionar personal de la clínica">
                   <mat-icon>group</mat-icon>
+                  Gestionar personal
                 </button>
                 <button mat-icon-button color="warn" (click)="deactivate(c.id)" matTooltip="Desactivar clínica">
                   <mat-icon>block</mat-icon>
@@ -107,6 +123,10 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
   styles: [`
     .w-full { width: 100%; }
     .pager { margin-top: 16px; display:flex; align-items:center; gap:12px; justify-content:flex-end; }
+    .actions-cell { display:flex; align-items:center; gap: 8px; flex-wrap: wrap; }
+    .health-status { border: 1px solid var(--dentis-border); }
+    .health-ok { color: #2e7d32; }
+    .health-down { color: #c62828; }
   `]
 })
 export class ClinicsListComponent implements OnInit {
@@ -117,14 +137,48 @@ export class ClinicsListComponent implements OnInit {
   totalPages = 1;
   errorMessage = '';
   loading = false;
+  backendStatus: 'checking' | 'up' | 'down' = 'checking';
 
   constructor(
     private readonly clinicService: ClinicService,
+    private readonly backendHealthService: BackendHealthService,
     private readonly dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
+    this.checkBackendStatus();
     this.load();
+  }
+
+  get backendStatusIcon(): string {
+    if (this.backendStatus === 'up') {
+      return 'check_circle';
+    }
+
+    if (this.backendStatus === 'down') {
+      return 'error';
+    }
+
+    return 'sync';
+  }
+
+  get backendStatusTooltip(): string {
+    if (this.backendStatus === 'up') {
+      return 'Backend operativo';
+    }
+
+    if (this.backendStatus === 'down') {
+      return 'Backend no disponible';
+    }
+
+    return 'Validando estado del backend...';
+  }
+
+  checkBackendStatus(): void {
+    this.backendStatus = 'checking';
+    this.backendHealthService.check().subscribe((isUp) => {
+      this.backendStatus = isUp ? 'up' : 'down';
+    });
   }
 
   load(): void {

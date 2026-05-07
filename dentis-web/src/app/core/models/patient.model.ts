@@ -1,6 +1,6 @@
 export interface ContactInfo {
-  email: string;
-  phoneNumber: string;
+  email?: string;
+  phoneNumber?: string;
   alternativePhone?: string;
 }
 
@@ -12,10 +12,10 @@ export interface Address {
 }
 
 export interface Representative {
-  fullName: string;
-  relationship: string;
-  phoneNumber: string;
-  email?: string;
+  fullName?: string;
+  idDocument?: string;
+  relationship?: string;
+  phoneNumber?: string;
 }
 
 export type Sex = 'MALE' | 'FEMALE' | 'INTERSEX' | 'NOT_SPECIFIED';
@@ -44,18 +44,20 @@ export interface CreatePatientRequest {
   sex: Sex;
   gender: Gender;
   socialName?: string;
-  email: string;
-  phoneNumber: string;
-  alternativePhone?: string;
-  street?: string;
-  city?: string;
-  state?: string;
-  zipCode?: string;
-  representativeName?: string;
-  representativeRelationship?: string;
-  representativePhone?: string;
-  representativeEmail?: string;
+  contactInfo: ContactInfo;
+  address?: Address;
+  representative?: Representative;
 }
 
-export type UpdatePatientRequest = Partial<CreatePatientRequest>;
+export interface UpdatePatientRequest {
+  firstName?: string;
+  lastName?: string;
+  birthDate?: string;
+  sex?: Sex;
+  gender?: Gender;
+  socialName?: string;
+  contactInfo?: ContactInfo;
+  address?: Address;
+  representative?: Representative;
+}
 

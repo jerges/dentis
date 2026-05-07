@@ -9,9 +9,9 @@ export type AppointmentStatus =
 export interface Appointment {
   id: string;
   patientId: string;
-  patientName: string;
+  patientName?: string;
   dentistId: string;
-  dentistName: string;
+  dentistName?: string;
   startDateTime: string;
   endDateTime: string;
   status: AppointmentStatus;

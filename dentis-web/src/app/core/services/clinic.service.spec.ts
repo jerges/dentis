@@ -49,7 +49,8 @@ describe('ClinicService', () => {
       email: 'doctor1@dentis.dev',
       password: 'Admin1234',
       fullName: 'Doctor One',
-      role: 'MEDICO' as const
+      role: 'USER' as const,
+      staffType: 'DENTIST' as const
     };
 
     service.createClinicUser('clinic-1', payload).subscribe();
@@ -58,6 +59,23 @@ describe('ClinicService', () => {
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual(payload);
     req.flush({ success: true, data: { id: 'user-1', active: true, ...payload }, timestamp: new Date().toISOString() });
+  });
+
+  it('should update a clinic user', () => {
+    const payload = {
+      username: 'assistant1',
+      email: 'assistant1@dentis.dev',
+      fullName: 'Assistant One',
+      role: 'ADMIN' as const,
+      staffType: 'ADMINISTRATIVE' as const
+    };
+
+    service.updateClinicUser('clinic-1', 'user-10', payload).subscribe();
+
+    const req = httpMock.expectOne('/api/v1/clinics/clinic-1/users/user-10');
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual(payload);
+    req.flush({ success: true, data: { id: 'user-10', active: true, ...payload }, timestamp: new Date().toISOString() });
   });
 
   it('should delete a clinic user', () => {

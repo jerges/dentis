@@ -5,6 +5,6 @@ public enum UserRole {
     SUPER_ADMIN,
     /** Clinic administrator. Can manage their own clinic's data and users. */
     ADMIN,
-    /** Medical staff (doctor, dentist). Access limited to their clinic. */
-    MEDICO
+    /** Clinic staff member with standard access limited to their clinic. */
+    USER
 }

@@ -84,28 +84,42 @@ export const routes: Routes = [
       {
         path: 'clinics',
         canActivate: [authGuard],
-        data: { roles: ['SUPER_ADMIN', 'ADMIN'] },
+        data: { roles: ['SUPER_ADMIN'] },
         loadComponent: () =>
           import('./features/clinics/list/clinics-list.component').then((m) => m.ClinicsListComponent)
       },
       {
         path: 'clinics/new',
         canActivate: [authGuard],
-        data: { roles: ['SUPER_ADMIN', 'ADMIN'] },
+        data: { roles: ['SUPER_ADMIN'] },
         loadComponent: () =>
           import('./features/clinics/form/clinic-form.component').then((m) => m.ClinicFormComponent)
       },
       {
+        path: 'clinics/new-super-admin',
+        canActivate: [authGuard],
+        data: { roles: ['SUPER_ADMIN'] },
+        loadComponent: () =>
+          import('./features/clinics/users/super-admin-form.component').then((m) => m.SuperAdminFormComponent)
+      },
+      {
         path: 'clinics/:id/edit',
         canActivate: [authGuard],
-        data: { roles: ['SUPER_ADMIN', 'ADMIN'] },
+        data: { roles: ['SUPER_ADMIN'] },
         loadComponent: () =>
           import('./features/clinics/form/clinic-form.component').then((m) => m.ClinicFormComponent)
       },
       {
         path: 'clinics/:clinicId/users',
         canActivate: [authGuard],
-        data: { roles: ['SUPER_ADMIN', 'ADMIN'] },
+        data: { roles: ['SUPER_ADMIN'] },
+        loadComponent: () =>
+          import('./features/clinics/users/clinic-users.component').then((m) => m.ClinicUsersComponent)
+      },
+      {
+        path: 'my-clinic/users',
+        canActivate: [authGuard],
+        data: { roles: ['ADMIN'] },
         loadComponent: () =>
           import('./features/clinics/users/clinic-users.component').then((m) => m.ClinicUsersComponent)
       }

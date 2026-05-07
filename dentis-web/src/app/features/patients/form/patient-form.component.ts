@@ -13,6 +13,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { PatientService } from '../../../core/services/patient.service';
+import { CreatePatientRequest, Sex, Gender, UpdatePatientRequest } from '../../../core/models/patient.model';
 
 @Component({
   selector: 'app-patient-form',
@@ -121,6 +122,10 @@ import { PatientService } from '../../../core/services/patient.service';
                     <mat-label>Estado</mat-label>
                     <input matInput formControlName="state" />
                   </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Código Postal</mat-label>
+                    <input matInput formControlName="zipCode" />
+                  </mat-form-field>
                 </div>
                 <div class="step-actions">
                   <button mat-stroked-button matStepperPrevious>
@@ -199,7 +204,8 @@ export class PatientFormComponent implements OnInit {
     alternativePhone: [''],
     street: [''],
     city: [''],
-    state: ['']
+    state: [''],
+    zipCode: ['']
   });
 
   representativeForm = this.fb.group({
@@ -229,24 +235,69 @@ export class PatientFormComponent implements OnInit {
         this.contactForm.patchValue({
           email: p.contactInfo?.email, phoneNumber: p.contactInfo?.phoneNumber,
           alternativePhone: p.contactInfo?.alternativePhone,
-          street: p.address?.street, city: p.address?.city, state: p.address?.state
+          street: p.address?.street, city: p.address?.city, state: p.address?.state, zipCode: p.address?.zipCode
+        });
+        this.representativeForm.patchValue({
+          representativeName: p.representative?.fullName,
+          representativeRelationship: p.representative?.relationship,
+          representativePhone: p.representative?.phoneNumber
         });
       });
     }
   }
 
   onSubmit(): void {
-    if (this.personalForm.invalid || this.contactForm.invalid) return;
+    if (this.personalForm.invalid || this.contactForm.invalid) {
+      this.personalForm.markAllAsTouched();
+      this.contactForm.markAllAsTouched();
+      return;
+    }
+
     this.loading = true;
-    const payload = {
-      ...this.personalForm.value,
-      ...this.contactForm.value,
-      ...this.representativeForm.value
-    } as any;
+    const personal = this.personalForm.getRawValue();
+    const contact = this.contactForm.getRawValue();
+    const representative = this.representativeForm.getRawValue();
+
+    const normalizedBirthDate = this.formatBirthDate(personal.birthDate);
+    const representativePayload = this.buildRepresentativePayload(representative);
+
+    const basePayload = {
+      firstName: personal.firstName ?? '',
+      lastName: personal.lastName ?? '',
+      birthDate: normalizedBirthDate,
+      sex: (personal.sex ?? 'NOT_SPECIFIED') as Sex,
+      gender: (personal.gender ?? 'NOT_SPECIFIED') as Gender,
+      socialName: personal.socialName ?? undefined,
+      contactInfo: {
+        email: contact.email ?? undefined,
+        phoneNumber: contact.phoneNumber ?? undefined,
+        alternativePhone: contact.alternativePhone ?? undefined
+      },
+      address: {
+        street: contact.street ?? undefined,
+        city: contact.city ?? undefined,
+        state: contact.state ?? undefined,
+        zipCode: contact.zipCode ?? undefined
+      },
+      representative: representativePayload
+    };
 
     const op$ = this.isEdit
-      ? this.patientService.update(this.id(), payload)
-      : this.patientService.create(payload);
+      ? this.patientService.update(this.id(), {
+          firstName: basePayload.firstName,
+          lastName: basePayload.lastName,
+          birthDate: basePayload.birthDate,
+          sex: basePayload.sex,
+          gender: basePayload.gender,
+          socialName: basePayload.socialName,
+          contactInfo: basePayload.contactInfo,
+          address: basePayload.address,
+          representative: basePayload.representative
+        } as UpdatePatientRequest)
+      : this.patientService.create({
+          ...basePayload,
+          idDocument: personal.idDocument ?? ''
+        } as CreatePatientRequest);
 
     op$.subscribe({
       next: (p) => {
@@ -254,10 +305,45 @@ export class PatientFormComponent implements OnInit {
         this.router.navigate(['/patients', p.id]);
       },
       error: () => {
-        this.snack.open('Error al guardar. Intente de nuevo.', 'OK', { duration: 4000 });
         this.loading = false;
       }
     });
+  }
+
+  private formatBirthDate(value: Date | string | null): string {
+    if (!value) {
+      return '';
+    }
+
+    if (typeof value === 'string') {
+      return value.slice(0, 10);
+    }
+
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10);
+  }
+
+  private buildRepresentativePayload(value: {
+    representativeName: string | null;
+    representativeRelationship: string | null;
+    representativePhone: string | null;
+    representativeEmail: string | null;
+  }): UpdatePatientRequest['representative'] {
+    const hasRepresentative = !!(
+      value.representativeName ||
+      value.representativeRelationship ||
+      value.representativePhone
+    );
+
+    if (!hasRepresentative) {
+      return undefined;
+    }
+
+    return {
+      fullName: value.representativeName ?? undefined,
+      relationship: value.representativeRelationship ?? undefined,
+      phoneNumber: value.representativePhone ?? undefined
+    };
   }
 }
 

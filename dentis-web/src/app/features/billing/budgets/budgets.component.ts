@@ -1,23 +1,35 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { catchError, debounceTime, distinctUntilChanged, forkJoin, map, Observable, of, startWith, switchMap, tap } from 'rxjs';
 import { BillingService } from '../../../core/services/billing.service';
-import { Budget } from '../../../core/models/billing.model';
+import { AuthService } from '../../../core/services/auth.service';
+import { ClinicService } from '../../../core/services/clinic.service';
+import { PatientService } from '../../../core/services/patient.service';
+import { Budget, CreateBudgetRequest, Tariff } from '../../../core/models/billing.model';
+import { Clinic, ClinicUser } from '../../../core/models/clinic.model';
+import { Patient } from '../../../core/models/patient.model';
+import { EntityAutocompleteComponent } from '../../../shared/components/entity-autocomplete/entity-autocomplete.component';
 
 @Component({
   selector: 'app-budgets',
   standalone: true,
   imports: [
-    CommonModule, RouterLink,
+    CommonModule, RouterLink, ReactiveFormsModule,
     MatCardModule, MatTableModule, MatButtonModule,
-    MatIconModule, MatChipsModule, MatSnackBarModule, MatTooltipModule
+    MatIconModule, MatChipsModule, MatSnackBarModule, MatTooltipModule,
+    MatFormFieldModule, MatInputModule, EntityAutocompleteComponent
   ],
   template: `
     <div class="page-container">
@@ -27,25 +39,98 @@ import { Budget } from '../../../core/models/billing.model';
           <p class="page-subtitle">Gestión de presupuestos de tratamiento</p>
         </div>
         <span class="spacer"></span>
-        <button mat-raised-button color="primary">
-          <mat-icon>add</mat-icon> Nuevo Presupuesto
+        <button mat-raised-button color="primary" (click)="showForm = !showForm">
+          <mat-icon>{{ showForm ? 'close' : 'add' }}</mat-icon>
+          {{ showForm ? 'Cancelar' : 'Nuevo Presupuesto' }}
         </button>
       </div>
+
+      @if (showForm) {
+        <mat-card class="form-card">
+          <mat-card-content>
+            <form [formGroup]="form" (ngSubmit)="onSubmit()" class="form-grid">
+              <app-entity-autocomplete
+                [label]="'Paciente *'"
+                [placeholder]="'Busca por nombre o documento'"
+                [control]="patientSearchControl"
+                [options]="filteredPatients()"
+                [displayWith]="displayPatient"
+                [trackByValue]="trackPatient"
+                [showEmptyState]="searchTerm(patientSearchControl.value).length >= 2"
+                [emptyMessage]="'No patients found'"
+                [errorMessage]="'Select a patient from the list'"
+                (optionSelected)="onPatientSelected($event)" />
+
+              <app-entity-autocomplete
+                [label]="'Dentista *'"
+                [placeholder]="'Selecciona profesional'"
+                [control]="dentistSearchControl"
+                [options]="filteredDentists()"
+                [displayWith]="displayDentist"
+                [trackByValue]="trackDentist"
+                [showEmptyState]="searchTerm(dentistSearchControl.value).length >= 1"
+                [emptyMessage]="'No dentists found'"
+                [errorMessage]="'Select a dentist from the list'"
+                (optionSelected)="onDentistSelected($event)" />
+
+              <app-entity-autocomplete
+                [label]="'Arancel *'"
+                [placeholder]="'Selecciona arancel'"
+                [control]="tariffSearchControl"
+                [options]="filteredTariffs()"
+                [displayWith]="displayTariff"
+                [trackByValue]="trackTariff"
+                [showEmptyState]="searchTerm(tariffSearchControl.value).length >= 1"
+                [emptyMessage]="'No tariffs found'"
+                [errorMessage]="'Select a tariff from the list'"
+                (optionSelected)="onTariffSelected($event)" />
+
+              <mat-form-field appearance="outline">
+                <mat-label>Cantidad *</mat-label>
+                <input matInput type="number" min="1" formControlName="quantity" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Precio unitario *</mat-label>
+                <input matInput type="number" min="0.01" step="0.01" formControlName="unitPrice" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Descuento (%)</mat-label>
+                <input matInput type="number" min="0" max="100" step="0.01" formControlName="discountPercentage" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-span">
+                <mat-label>Notas</mat-label>
+                <input matInput formControlName="notes" />
+              </mat-form-field>
+
+              <div class="actions full-span">
+                <button mat-stroked-button type="button" (click)="showForm = false">Cancelar</button>
+                <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid || loading">
+                  <mat-icon>save</mat-icon>
+                  Guardar presupuesto
+                </button>
+              </div>
+            </form>
+          </mat-card-content>
+        </mat-card>
+      }
 
       <mat-card>
         <mat-card-content>
           <table mat-table [dataSource]="dataSource" class="w-full">
             <ng-container matColumnDef="patient">
               <th mat-header-cell *matHeaderCellDef>Paciente</th>
-              <td mat-cell *matCellDef="let b">{{ b.patientName }}</td>
+              <td mat-cell *matCellDef="let b">{{ b.patientName ?? b.patientId }}</td>
             </ng-container>
             <ng-container matColumnDef="dentist">
               <th mat-header-cell *matHeaderCellDef>Dentista</th>
-              <td mat-cell *matCellDef="let b">Dr. {{ b.dentistName }}</td>
+              <td mat-cell *matCellDef="let b">Dr. {{ b.dentistName ?? b.dentistId }}</td>
             </ng-container>
             <ng-container matColumnDef="total">
               <th mat-header-cell *matHeaderCellDef>Total</th>
-              <td mat-cell *matCellDef="let b" class="amount">{{ b.totalAmount | currency:'USD' }}</td>
+              <td mat-cell *matCellDef="let b" class="amount">{{ calculateBudgetTotal(b) | currency:'USD' }}</td>
             </ng-container>
             <ng-container matColumnDef="status">
               <th mat-header-cell *matHeaderCellDef>Estado</th>
@@ -61,7 +146,7 @@ import { Budget } from '../../../core/models/billing.model';
               <th mat-header-cell *matHeaderCellDef>Acciones</th>
               <td mat-cell *matCellDef="let b">
                 <button mat-icon-button matTooltip="Aprobar" color="primary"
-                        (click)="approveBudget(b.id)" [disabled]="b.status !== 'PENDING_APPROVAL'">
+                        (click)="approveBudget(b.id)" [disabled]="b.status !== 'PRESENTED' && b.status !== 'DRAFT'">
                   <mat-icon>check_circle</mat-icon>
                 </button>
                 <button mat-icon-button matTooltip="Ver resumen" (click)="viewSummary(b.id)">
@@ -85,18 +170,175 @@ import { Budget } from '../../../core/models/billing.model';
     .page-header { margin-bottom: 24px; }
     .page-title { margin: 0 0 4px; font-size: 24px; font-weight: 700; color: #1a237e; }
     .page-subtitle { margin: 0; color: #666; font-size: 13px; }
+    .form-card { margin-bottom: 16px; }
+    .form-grid { display:grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap: 12px; }
+    .full-span { grid-column: 1 / -1; }
+    .actions { display:flex; justify-content:flex-end; gap: 10px; }
     .w-full { width: 100%; }
     .amount { font-weight: 600; color: #2e7d32; }
     .table-row:hover { background: #f5f5f5; cursor: pointer; }
+    @media (max-width: 900px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .actions { justify-content: stretch; }
+    }
   `]
 })
 export class BudgetsComponent implements OnInit {
   cols = ['patient', 'dentist', 'total', 'status', 'date', 'actions'];
   dataSource = new MatTableDataSource<Budget>([]);
+  showForm = false;
+  loading = false;
+  dentists: ClinicUser[] = [];
+  tariffs: Tariff[] = [];
 
-  constructor(private billingService: BillingService, private snack: MatSnackBar) {}
+  readonly patientSearchControl = this.fb.control<string | Patient>('');
+  readonly dentistSearchControl = this.fb.control<string | ClinicUser>('');
+  readonly tariffSearchControl = this.fb.control<string | Tariff>('');
 
-  ngOnInit(): void { /* Load budgets for a patient — in real app uses filters/search */ }
+  readonly filteredPatients$ = this.patientSearchControl.valueChanges.pipe(
+    startWith(''),
+    debounceTime(250),
+    distinctUntilChanged(),
+    tap((value) => {
+      if (typeof value === 'string') {
+        this.form?.controls.patientId.setValue('');
+      }
+    }),
+    switchMap((value) => this.searchPatients(this.searchTerm(value), value))
+  );
+
+  readonly filteredDentists$ = this.dentistSearchControl.valueChanges.pipe(
+    startWith(''),
+    tap((value) => {
+      if (typeof value === 'string') {
+        this.form?.controls.dentistId.setValue('');
+      }
+    }),
+    map((value) => this.filterDentists(this.searchTerm(value), value))
+  );
+
+  readonly filteredTariffs$ = this.tariffSearchControl.valueChanges.pipe(
+    startWith(''),
+    tap((value) => {
+      if (typeof value === 'string') {
+        this.form?.controls.tariffId.setValue('');
+      }
+    }),
+    map((value) => this.filterTariffs(this.searchTerm(value), value))
+  );
+
+  readonly filteredPatients = toSignal(this.filteredPatients$, { initialValue: [] as Patient[] });
+  readonly filteredDentists = toSignal(this.filteredDentists$, { initialValue: [] as ClinicUser[] });
+  readonly filteredTariffs = toSignal(this.filteredTariffs$, { initialValue: [] as Tariff[] });
+
+  readonly form = this.fb.group({
+    patientId: ['', Validators.required],
+    dentistId: ['', Validators.required],
+    tariffId: ['', Validators.required],
+    quantity: [1, [Validators.required, Validators.min(1)]],
+    unitPrice: [null as number | null, [Validators.required, Validators.min(0.01)]],
+    discountPercentage: [0],
+    notes: ['']
+  });
+
+  constructor(
+    private readonly fb: FormBuilder,
+    private readonly billingService: BillingService,
+    private readonly patientService: PatientService,
+    private readonly clinicService: ClinicService,
+    private readonly auth: AuthService,
+    private readonly snack: MatSnackBar
+  ) {}
+
+  ngOnInit(): void {
+    this.loadDentists();
+    this.loadTariffs();
+  }
+
+  onSubmit(): void {
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      this.patientSearchControl.markAsTouched();
+      this.dentistSearchControl.markAsTouched();
+      this.tariffSearchControl.markAsTouched();
+      this.snack.open('Revisa los campos obligatorios del formulario', 'OK', { duration: 3000 });
+      return;
+    }
+
+    const raw = this.form.getRawValue();
+    const selectedTariff = this.tariffs.find((tariff) => tariff.id === raw.tariffId);
+    const payload: CreateBudgetRequest = {
+      patientId: raw.patientId ?? '',
+      dentistId: raw.dentistId ?? '',
+      notes: raw.notes ?? undefined,
+      items: [
+        {
+          tariffId: raw.tariffId ?? '',
+          description: selectedTariff?.name ?? 'Budget item',
+          quantity: Number(raw.quantity ?? 1),
+          unitPrice: Number(raw.unitPrice ?? 0),
+          discountPercentage: Number(raw.discountPercentage ?? 0)
+        }
+      ]
+    };
+
+    this.loading = true;
+    this.billingService.createBudget(payload).subscribe({
+      next: (created) => {
+        this.snack.open('Presupuesto creado', 'OK', { duration: 3000 });
+        this.showForm = false;
+        this.loading = false;
+        this.loadBudgetsByPatient(created.patientId);
+      },
+      error: () => {
+        this.snack.open('No se pudo crear el presupuesto', 'OK', { duration: 3000 });
+        this.loading = false;
+      }
+    });
+  }
+
+  onPatientSelected(patient: Patient): void {
+    this.form.controls.patientId.setValue(patient.id);
+    this.loadBudgetsByPatient(patient.id);
+  }
+
+  onDentistSelected(dentist: ClinicUser): void {
+    this.form.controls.dentistId.setValue(dentist.id);
+  }
+
+  onTariffSelected(tariff: Tariff): void {
+    this.form.controls.tariffId.setValue(tariff.id);
+    this.form.controls.unitPrice.setValue(tariff.basePrice);
+  }
+
+  displayPatient = (patient: Patient | string | null): string =>
+    !patient || typeof patient === 'string' ? patient ?? '' : `${patient.firstName} ${patient.lastName} · ${patient.idDocument}`;
+
+  displayDentist = (dentist: ClinicUser | string | null): string =>
+    !dentist || typeof dentist === 'string' ? dentist ?? '' : `${dentist.fullName} · ${dentist.username}`;
+
+  displayTariff = (tariff: Tariff | string | null): string =>
+    !tariff || typeof tariff === 'string' ? tariff ?? '' : `${tariff.code} · ${tariff.name} · ${tariff.basePrice.toFixed(2)} USD`;
+
+  trackPatient = (patient: Patient): string => patient.id;
+  trackDentist = (dentist: ClinicUser): string => dentist.id;
+  trackTariff = (tariff: Tariff): string => tariff.id;
+
+  searchTerm(value: string | Patient | ClinicUser | Tariff | null): string {
+    if (typeof value === 'string') {
+      return value.trim();
+    }
+    if (!value) {
+      return '';
+    }
+    if ('firstName' in value) {
+      return this.displayPatient(value);
+    }
+    if ('basePrice' in value) {
+      return this.displayTariff(value);
+    }
+    return this.displayDentist(value);
+  }
 
   approveBudget(id: string): void {
     this.billingService.approveBudget(id).subscribe({
@@ -111,8 +353,138 @@ export class BudgetsComponent implements OnInit {
 
   viewSummary(id: string): void {
     this.billingService.getBudgetSummary(id).subscribe((s) =>
-      this.snack.open(`Total: ${s.totalAmount} | Pagado: ${s.totalPaid} | Pendiente: ${s.totalPending}`, 'OK', { duration: 5000 })
+      this.snack.open(`Total: ${s.grandTotal} | Pagado: ${s.totalPaid} | Saldo: ${s.balance}`, 'OK', { duration: 5000 })
     );
+  }
+
+  calculateBudgetTotal(budget: Budget): number {
+    if (typeof budget.totalAmount === 'number') {
+      return budget.totalAmount;
+    }
+
+    return (budget.items ?? []).reduce((sum, item) => {
+      const base = Number(item.unitPrice ?? 0) * Number(item.quantity ?? 0);
+      const discount = Number(item.discountPercentage ?? 0);
+      return sum + base - base * (discount / 100);
+    }, 0);
+  }
+
+  private searchPatients(term: string, value: string | Patient | null): Observable<Patient[]> {
+    if (value && typeof value !== 'string') {
+      return of([value]);
+    }
+    if (term.length < 2) {
+      return of([]);
+    }
+    return this.patientService.search(term, 0, 10).pipe(
+      map((page) => page.content),
+      catchError(() => of([]))
+    );
+  }
+
+  private filterDentists(term: string, value: string | ClinicUser | null): ClinicUser[] {
+    if (value && typeof value !== 'string') {
+      return [value];
+    }
+    if (!term) {
+      return this.dentists.slice(0, 10);
+    }
+    const normalized = term.toLowerCase();
+    return this.dentists
+      .filter((dentist) => dentist.fullName.toLowerCase().includes(normalized) || dentist.username.toLowerCase().includes(normalized))
+      .slice(0, 10);
+  }
+
+  private filterTariffs(term: string, value: string | Tariff | null): Tariff[] {
+    if (value && typeof value !== 'string') {
+      return [value];
+    }
+    if (!term) {
+      return this.tariffs.slice(0, 10);
+    }
+    const normalized = term.toLowerCase();
+    return this.tariffs
+      .filter((tariff) => {
+        const label = `${tariff.code} ${tariff.name} ${tariff.category}`.toLowerCase();
+        return label.includes(normalized);
+      })
+      .slice(0, 10);
+  }
+
+  private loadBudgetsByPatient(patientId: string): void {
+    this.billingService.getBudgetsByPatient(patientId, 0, 50).subscribe({
+      next: (page) => {
+        this.dataSource.data = page.content ?? [];
+      },
+      error: () => {
+        this.dataSource.data = [];
+      }
+    });
+  }
+
+  private loadTariffs(): void {
+    this.billingService.getTariffs(0, 200).subscribe({
+      next: (page) => {
+        this.tariffs = (page.content ?? []).filter((tariff) => tariff.active);
+      },
+      error: () => {
+        this.tariffs = [];
+        this.snack.open('No se pudieron cargar los aranceles', 'OK', { duration: 3000 });
+      }
+    });
+  }
+
+  private loadDentists(): void {
+    this.getDentistSource().subscribe({
+      next: (dentists) => {
+        this.dentists = dentists;
+      },
+      error: () => {
+        this.dentists = [];
+        this.snack.open('No se pudieron cargar los dentistas', 'OK', { duration: 3000 });
+      }
+    });
+  }
+
+  private getDentistSource(): Observable<ClinicUser[]> {
+    const clinicId = this.auth.currentUser()?.clinicId;
+    if (clinicId) {
+      return this.clinicService.getClinicUsers(clinicId).pipe(
+        map((response) => this.extractActiveDentists(response.data ?? [])),
+        catchError(() => of([]))
+      );
+    }
+
+    return this.clinicService.getActiveClinics().pipe(
+      switchMap((response) => {
+        const clinics = response.data ?? [];
+        if (!clinics.length) {
+          return of([]);
+        }
+
+        return forkJoin(
+          clinics.map((clinic: Clinic) =>
+            this.clinicService.getClinicUsers(clinic.id).pipe(
+              map((usersResponse) => usersResponse.data ?? []),
+              catchError(() => of([]))
+            )
+          )
+        ).pipe(
+          map((usersByClinic: ClinicUser[][]) => usersByClinic.flat()),
+          map((users) => this.extractActiveDentists(users))
+        );
+      }),
+      catchError(() => of([]))
+    );
+  }
+
+  private extractActiveDentists(users: ClinicUser[]): ClinicUser[] {
+    const unique = new Map<string, ClinicUser>();
+    users
+      .filter((user) => user.active && user.staffType === 'DENTIST')
+      .forEach((user) => unique.set(user.id, user));
+
+    return Array.from(unique.values()).sort((left, right) => left.fullName.localeCompare(right.fullName));
   }
 }
 

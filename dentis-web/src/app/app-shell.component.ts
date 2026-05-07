@@ -1,4 +1,4 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, OnDestroy, computed, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -19,12 +19,16 @@ import { ShellTopbarComponent } from './shared/components/shell-topbar/shell-top
   ],
   template: `
     <mat-sidenav-container class="shell-container">
-      <mat-sidenav #sidenav [opened]="sidenavOpen()" mode="side" class="sidenav">
-        <app-shell-sidebar [items]="visibleNavItems()" />
+      <mat-sidenav
+        [opened]="sidenavOpen()"
+        [mode]="isMobile() ? 'over' : 'side'"
+        [fixedInViewport]="isMobile()"
+        class="sidenav">
+        <app-shell-sidebar [items]="visibleNavItems()" (itemSelected)="closeMenuOnMobile()" />
       </mat-sidenav>
 
       <mat-sidenav-content>
-        <app-shell-topbar (menuClick)="sidenavOpen.set(!sidenavOpen())" />
+        <app-shell-topbar (menuClick)="toggleMenu()" />
         <main class="main-content">
           <router-outlet />
         </main>
@@ -65,7 +69,16 @@ import { ShellTopbarComponent } from './shared/components/shell-topbar/shell-top
   `]
 })
 export class AppShellComponent {
-  sidenavOpen = signal(true);
+  private static readonly MOBILE_BREAKPOINT = '(max-width: 959px)';
+
+  private readonly mobileQuery = window.matchMedia(AppShellComponent.MOBILE_BREAKPOINT);
+  readonly isMobile = signal(this.mobileQuery.matches);
+  readonly sidenavOpen = signal(!this.mobileQuery.matches);
+
+  private readonly mobileQueryListener = (event: MediaQueryListEvent): void => {
+    this.isMobile.set(event.matches);
+    this.sidenavOpen.set(!event.matches);
+  };
 
   readonly navItems = APP_NAV_ITEMS;
 
@@ -74,5 +87,21 @@ export class AppShellComponent {
     return this.navItems.filter((item) => !item.roles || !!role && item.roles.includes(role));
   });
 
-  constructor(public auth: AuthService) {}
+  constructor(public auth: AuthService) {
+    this.mobileQuery.addEventListener('change', this.mobileQueryListener);
+  }
+
+  ngOnDestroy(): void {
+    this.mobileQuery.removeEventListener('change', this.mobileQueryListener);
+  }
+
+  toggleMenu(): void {
+    this.sidenavOpen.set(!this.sidenavOpen());
+  }
+
+  closeMenuOnMobile(): void {
+    if (this.isMobile()) {
+      this.sidenavOpen.set(false);
+    }
+  }
 }

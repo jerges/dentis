@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, input } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
@@ -39,6 +39,7 @@ import { AuthService } from '../../../core/services/auth.service';
            class="menu-link"
            [routerLink]="item.route"
            routerLinkActive="active-link"
+           (click)="onItemSelected()"
            [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }">
           <mat-icon matListItemIcon class="menu-icon">{{ item.icon }}</mat-icon>
           <span matListItemTitle class="menu-label">{{ item.label }}</span>
@@ -166,7 +167,12 @@ import { AuthService } from '../../../core/services/auth.service';
 })
 export class ShellSidebarComponent {
   readonly items = input.required<AppNavItem[]>();
+  readonly itemSelected = output<void>();
 
   constructor(public auth: AuthService) {}
+
+  onItemSelected(): void {
+    this.itemSelected.emit();
+  }
 }
 

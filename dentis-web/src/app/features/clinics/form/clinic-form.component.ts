@@ -9,6 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { ClinicService } from '../../../core/services/clinic.service';
 import { CreateClinicRequest, UpdateClinicRequest } from '../../../core/models/clinic.model';
+import { getHttpErrorMessage } from '../../../core/utils/http-error.util';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 
 @Component({
@@ -42,6 +43,7 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
             <mat-form-field appearance="outline">
               <mat-label>Nombre</mat-label>
               <input matInput formControlName="name" />
+              <mat-error>Nombre obligatorio (max 200)</mat-error>
             </mat-form-field>
 
             <mat-form-field appearance="outline">
@@ -52,6 +54,7 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
             <mat-form-field appearance="outline">
               <mat-label>Email</mat-label>
               <input matInput formControlName="email" />
+              <mat-error>Email inválido</mat-error>
             </mat-form-field>
 
             <mat-form-field appearance="outline">
@@ -99,14 +102,14 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
 })
 export class ClinicFormComponent implements OnInit {
   readonly form = this.fb.group({
-    name: ['', Validators.required],
-    nif: [''],
-    email: [''],
-    phone: [''],
-    address: [''],
-    city: [''],
-    province: [''],
-    zipCode: ['']
+    name: ['', [Validators.required, Validators.maxLength(200)]],
+    nif: ['', Validators.maxLength(20)],
+    email: ['', [Validators.email, Validators.maxLength(150)]],
+    phone: ['', Validators.maxLength(20)],
+    address: ['', Validators.maxLength(300)],
+    city: ['', Validators.maxLength(100)],
+    province: ['', Validators.maxLength(100)],
+    zipCode: ['', Validators.maxLength(10)]
   });
 
   isEdit = false;
@@ -158,8 +161,8 @@ export class ClinicFormComponent implements OnInit {
 
     req$.subscribe({
       next: () => this.router.navigate(['/clinics']),
-      error: () => {
-        this.errorMessage = 'No se pudo guardar la clínica.';
+      error: (error) => {
+        this.errorMessage = getHttpErrorMessage(error);
       }
     });
   }

@@ -3,7 +3,7 @@ export interface LoginRequest {
   password: string;
 }
 
-export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'MEDICO' | string;
+export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'USER' | string;
 
 export interface AuthResponse {
   token: string;

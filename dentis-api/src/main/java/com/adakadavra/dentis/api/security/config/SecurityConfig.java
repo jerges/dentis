@@ -39,11 +39,11 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC_PATHS).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/**")
-                            .hasAnyRole("SUPER_ADMIN", "ADMIN", "MEDICO")
+                            .hasAnyRole("SUPER_ADMIN", "ADMIN", "USER")
                         .requestMatchers("/api/v1/clinics/**")
                             .hasAnyRole("SUPER_ADMIN", "ADMIN")
                         .anyRequest()
-                            .hasAnyRole("SUPER_ADMIN", "ADMIN", "MEDICO")
+                            .hasAnyRole("SUPER_ADMIN", "ADMIN", "USER")
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

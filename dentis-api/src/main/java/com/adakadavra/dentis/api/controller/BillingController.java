@@ -3,10 +3,15 @@ package com.adakadavra.dentis.api.controller;
 import com.adakadavra.dentis.billing.domain.model.*;
 import com.adakadavra.dentis.billing.domain.service.BudgetService;
 import com.adakadavra.dentis.billing.domain.service.PaymentService;
+import com.adakadavra.dentis.billing.domain.service.TariffService;
 import com.adakadavra.dentis.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +30,36 @@ public class BillingController {
 
     private final BudgetService budgetService;
     private final PaymentService paymentService;
+    private final TariffService tariffService;
+
+    @GetMapping("/tariffs")
+    @Operation(summary = "List tariffs")
+    public ResponseEntity<ApiResponse<Page<Tariff>>> getTariffs(Pageable pageable) {
+        return ResponseEntity.ok(ApiResponse.ok(tariffService.findAll(pageable)));
+    }
+
+    @PostMapping("/tariffs")
+    @Operation(summary = "Create a tariff")
+    public ResponseEntity<ApiResponse<Tariff>> createTariff(@Valid @RequestBody CreateTariffRequest request) {
+        Tariff tariff = Tariff.builder()
+                .code(request.getCode().trim().toUpperCase())
+                .name(request.getName().trim())
+                .description(request.getDescription())
+                .category(request.getCategory())
+                .basePrice(request.getBasePrice())
+                .discountAllowed(Boolean.TRUE.equals(request.getDiscountAllowed()))
+                .active(true)
+                .build();
+        Tariff created = tariffService.createTariff(tariff);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(created, "Tariff created successfully"));
+    }
+
+    @DeleteMapping("/tariffs/{id}")
+    @Operation(summary = "Deactivate a tariff")
+    public ResponseEntity<Void> deactivateTariff(@PathVariable UUID id) {
+        tariffService.deactivateTariff(id);
+        return ResponseEntity.noContent().build();
+    }
 
     @PostMapping("/budgets")
     @Operation(summary = "Create a treatment budget")
@@ -75,5 +110,27 @@ public class BillingController {
     public ResponseEntity<ApiResponse<Page<Budget>>> getBudgetsByPatient(
             @PathVariable UUID patientId, Pageable pageable) {
         return ResponseEntity.ok(ApiResponse.ok(budgetService.findByPatientId(patientId, pageable)));
+    }
+
+    @lombok.Data
+    public static class CreateTariffRequest {
+        @NotBlank
+        @Size(max = 30)
+        private String code;
+
+        @NotBlank
+        @Size(max = 200)
+        private String name;
+
+        private String description;
+
+        @NotNull
+        private TariffCategory category;
+
+        @NotNull
+        @DecimalMin("0.01")
+        private java.math.BigDecimal basePrice;
+
+        private Boolean discountAllowed;
     }
 }

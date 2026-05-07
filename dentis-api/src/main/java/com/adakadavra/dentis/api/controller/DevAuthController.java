@@ -1,6 +1,7 @@
 package com.adakadavra.dentis.api.controller;
 
 import com.adakadavra.dentis.api.security.service.JwtService;
+import com.adakadavra.dentis.api.security.entity.User;
 import com.adakadavra.dentis.common.response.ApiError;
 import com.adakadavra.dentis.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -67,6 +68,7 @@ public class DevAuthController {
                         .token(token)
                         .username(userDetails.getUsername())
                         .role(role)
+                        .clinicId(userDetails instanceof User user && user.getClinicId() != null ? user.getClinicId().toString() : null)
                         .expiresIn(jwtService.getExpirationMs())
                         .build()));
     }

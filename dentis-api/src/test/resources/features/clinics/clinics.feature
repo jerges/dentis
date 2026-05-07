@@ -22,7 +22,7 @@ Feature: Clinic Controller integration
 
   Scenario: List active clinics
     Given clinic api has an existing clinic
-    When clinic api lists active clinics as role "MEDICO"
+    When clinic api lists active clinics as role "MEDIC"
     Then clinic response status should be 200
     And clinic active list is not empty
 

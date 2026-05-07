@@ -18,5 +18,6 @@ public class ClinicUserResponse {
     private String email;
     private String fullName;
     private String role;
+    private String staffType;
     private boolean active;
 }

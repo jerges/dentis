@@ -4,6 +4,7 @@ import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/route
 import { of } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
 import { ClinicUsersComponent } from './clinic-users.component';
+import { AuthService } from '../../../core/services/auth.service';
 import { ClinicService } from '../../../core/services/clinic.service';
 import { ApiResponse } from '../../../core/models/api.model';
 import { ClinicUser } from '../../../core/models/clinic.model';
@@ -18,18 +19,19 @@ describe('ClinicUsersComponent', () => {
     clinicServiceSpy = jasmine.createSpyObj<ClinicService>('ClinicService', [
       'getClinicUsers',
       'createClinicUser',
+      'updateClinicUser',
       'deactivateClinicUser'
     ]);
     dialogSpy = jasmine.createSpyObj<MatDialog>('MatDialog', ['open']);
 
     const getUsersResponse: ApiResponse<ClinicUser[]> = {
       success: true,
-      data: [{ id: 'user-1', username: 'doctor1', fullName: 'Doctor One', email: 'doctor1@dentis.dev', role: 'MEDICO', active: true }],
+      data: [{ id: 'user-1', username: 'doctor1', fullName: 'Doctor One', email: 'doctor1@dentis.dev', role: 'USER', staffType: 'DENTIST', active: true }],
       timestamp: new Date().toISOString()
     };
     const createUserResponse: ApiResponse<ClinicUser> = {
       success: true,
-      data: { id: 'user-2', username: 'admin1', fullName: 'Admin One', email: 'admin1@dentis.dev', role: 'ADMIN', active: true },
+      data: { id: 'user-2', username: 'admin1', fullName: 'Admin One', email: 'admin1@dentis.dev', role: 'ADMIN', staffType: 'ADMINISTRATIVE', active: true },
       timestamp: new Date().toISOString()
     };
     const deactivateResponse: ApiResponse<null> = {
@@ -40,12 +42,19 @@ describe('ClinicUsersComponent', () => {
 
     clinicServiceSpy.getClinicUsers.and.returnValue(of(getUsersResponse));
     clinicServiceSpy.createClinicUser.and.returnValue(of(createUserResponse));
+    clinicServiceSpy.updateClinicUser.and.returnValue(of(createUserResponse));
     clinicServiceSpy.deactivateClinicUser.and.returnValue(of(deactivateResponse));
 
     await TestBed.configureTestingModule({
       imports: [ClinicUsersComponent, NoopAnimationsModule],
       providers: [
         provideRouter([]),
+        {
+          provide: AuthService,
+          useValue: {
+            currentUser: () => ({ username: 'admin', role: 'ADMIN', token: 'token', clinicId: 'clinic-1' })
+          }
+        },
         { provide: ClinicService, useValue: clinicServiceSpy },
         {
           provide: ActivatedRoute,
@@ -66,23 +75,75 @@ describe('ClinicUsersComponent', () => {
     expect(component.loading).toBeFalse();
   });
 
-  it('should create a clinic user', () => {
+  it('should create a dentist user with USER access', () => {
     component.form.patchValue({
       username: 'doctor2',
       fullName: 'Doctor Two',
       email: 'doctor2@dentis.dev',
       password: 'Admin1234',
-      role: 'MEDICO'
+      staffType: 'DENTIST',
+      role: 'USER'
     });
 
-    component.createUser();
+    component.saveUser();
 
     expect(clinicServiceSpy.createClinicUser).toHaveBeenCalledWith('clinic-1', {
       username: 'doctor2',
       fullName: 'Doctor Two',
       email: 'doctor2@dentis.dev',
       password: 'Admin1234',
-      role: 'MEDICO'
+      staffType: 'DENTIST',
+      role: 'USER'
+    });
+  });
+
+  it('should enforce USER role for dentist even if ADMIN is provided', () => {
+    component.form.patchValue({
+      username: 'doctor3',
+      fullName: 'Doctor Three',
+      email: 'doctor3@dentis.dev',
+      password: 'Admin1234',
+      staffType: 'DENTIST',
+      role: 'ADMIN'
+    });
+
+    component.saveUser();
+
+    expect(clinicServiceSpy.createClinicUser).toHaveBeenCalledWith('clinic-1', {
+      username: 'doctor3',
+      fullName: 'Doctor Three',
+      email: 'doctor3@dentis.dev',
+      password: 'Admin1234',
+      staffType: 'DENTIST',
+      role: 'USER'
+    });
+  });
+
+  it('should update an administrative user in edit mode', () => {
+    component.startEdit({
+      id: 'user-1',
+      username: 'assistant1',
+      fullName: 'Assistant One',
+      email: 'assistant1@dentis.dev',
+      role: 'ADMIN',
+      staffType: 'ADMINISTRATIVE',
+      active: true
+    });
+
+    component.form.patchValue({
+      fullName: 'Assistant Updated',
+      password: ''
+    });
+
+    component.saveUser();
+
+    expect(clinicServiceSpy.updateClinicUser).toHaveBeenCalledWith('clinic-1', 'user-1', {
+      username: 'assistant1',
+      fullName: 'Assistant Updated',
+      email: 'assistant1@dentis.dev',
+      password: undefined,
+      staffType: 'ADMINISTRATIVE',
+      role: 'ADMIN'
     });
   });
 

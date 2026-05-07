@@ -16,6 +16,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.*;
+import com.adakadavra.dentis.api.security.entity.User;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -43,6 +44,7 @@ public class AuthController {
                 .token(token)
                 .username(userDetails.getUsername())
                 .role(role)
+                .clinicId(userDetails instanceof User user && user.getClinicId() != null ? user.getClinicId().toString() : null)
                 .expiresIn(jwtService.getExpirationMs())
                 .build()));
     }
@@ -67,6 +69,7 @@ public class AuthController {
         private final String type = "Bearer";
         private final String username;
         private final String role;
+        private final String clinicId;
         private final long expiresIn;
     }
 }

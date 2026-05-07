@@ -40,6 +40,10 @@ public class User implements UserDetails, Persistable<UUID> {
     @Column(nullable = false, length = 30)
     private UserRole role;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "staff_type", nullable = false, length = 30)
+    private UserStaffType staffType;
+
     /** Clinic this user belongs to. Null only for SUPER_ADMIN. */
     @Column(name = "clinic_id")
     private UUID clinicId;

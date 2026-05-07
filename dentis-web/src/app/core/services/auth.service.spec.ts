@@ -70,7 +70,7 @@ describe('AuthService', () => {
     service.currentUser.set({ username: 'jbello', role: 'SUPER_ADMIN', token: 'jwt-token' });
 
     expect(service.hasAnyRole(['SUPER_ADMIN'])).toBeTrue();
-    expect(service.hasAnyRole(['ADMIN', 'MEDICO'])).toBeFalse();
+    expect(service.hasAnyRole(['ADMIN', 'USER'])).toBeFalse();
   });
 });
 

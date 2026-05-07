@@ -15,41 +15,41 @@
         }
     </style>
 </head>
-    
+
 <body>
 <div class='wrapper'>
     <div class='pad1'>
         <h1><a href="../../../../index.html">All files</a> / <a href="index.html">app/features/clinics/users</a> clinic-users.component.ts</h1>
         <div class='clearfix'>
-            
+
             <div class='fl pad1y space-right2'>
                 <span class="strong">76.92% </span>
                 <span class="quiet">Statements</span>
                 <span class='fraction'>30/39</span>
             </div>
-        
-            
+
+
             <div class='fl pad1y space-right2'>
                 <span class="strong">40% </span>
                 <span class="quiet">Branches</span>
                 <span class='fraction'>6/15</span>
             </div>
-        
-            
+
+
             <div class='fl pad1y space-right2'>
                 <span class="strong">75% </span>
                 <span class="quiet">Functions</span>
                 <span class='fraction'>9/12</span>
             </div>
-        
-            
+
+
             <div class='fl pad1y space-right2'>
                 <span class="strong">76.92% </span>
                 <span class="quiet">Lines</span>
                 <span class='fraction'>30/39</span>
             </div>
-        
-            
+
+
         </div>
         <p class="quiet">
             Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
@@ -574,7 +574,7 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
   ],
   template: `
     &lt;div class="page-container"&gt;
-      &lt;app-page-header title="Usuarios de la Clínica" subtitle="Alta y gestión de ADMIN/MEDICO para la clínica" backRoute="/clinics" /&gt;
+      &lt;app-page-header title="Usuarios de la Clínica" subtitle="Alta y gestión de ADMIN/MEDIC para la clínica" backRoute="/clinics" /&gt;
 &nbsp;
       @if (errorMessage) {
         &lt;div class="error-alert"&gt;{{ errorMessage }}&lt;/div&gt;
@@ -607,7 +607,7 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
               &lt;mat-label&gt;Rol&lt;/mat-label&gt;
               &lt;mat-select formControlName="role"&gt;
                 &lt;mat-option value="ADMIN"&gt;ADMIN&lt;/mat-option&gt;
-                &lt;mat-option value="MEDICO"&gt;MEDICO&lt;/mat-option&gt;
+                &lt;mat-option value="MEDIC"&gt;MEDIC&lt;/mat-option&gt;
               &lt;/mat-select&gt;
             &lt;/mat-form-field&gt;
 &nbsp;
@@ -687,7 +687,7 @@ export class ClinicUsersComponent implements OnInit {
     fullName: ['', Validators.required],
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(8)]],
-    role: ['MEDICO', Validators.required]
+    role: ['MEDIC', Validators.required]
   });
 &nbsp;
   constructor(
@@ -732,12 +732,12 @@ export class ClinicUsersComponent implements OnInit {
       fullName: this.form.value.fullName ?? <span class="branch-1 cbranch-no" title="branch not covered" >'',</span>
       email: this.form.value.email ?? <span class="branch-1 cbranch-no" title="branch not covered" >'',</span>
       password: this.form.value.password ?? <span class="branch-1 cbranch-no" title="branch not covered" >'',</span>
-      role: (this.form.value.role as 'ADMIN' | 'MEDICO') ?? <span class="branch-1 cbranch-no" title="branch not covered" >'MEDICO'</span>
+      role: (this.form.value.role as 'ADMIN' | 'MEDIC') ?? <span class="branch-1 cbranch-no" title="branch not covered" >'MEDIC'</span>
     };
 &nbsp;
     this.clinicService.createClinicUser(this.clinicId, payload).subscribe({
       next: () =&gt; {
-        this.form.patchValue({ password: '', role: 'MEDICO' });
+        this.form.patchValue({ password: '', role: 'MEDIC' });
         this.loadUsers();
       },
       error: <span class="fstat-no" title="function not covered" >() =</span>&gt; {
@@ -790,4 +790,3 @@ export class ClinicUsersComponent implements OnInit {
         <script src="../../../../block-navigation.js"></script>
     </body>
 </html>
-    

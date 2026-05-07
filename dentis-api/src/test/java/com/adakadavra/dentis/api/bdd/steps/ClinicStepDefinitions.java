@@ -223,7 +223,8 @@ public class ClinicStepDefinitions {
                 "email", email,
                 "password", "StrongPass123!",
                 "fullName", "Doctor BDD",
-                "role", "MEDICO"
+                "role", "USER",
+                "staffType", "DENTIST"
         );
     }
 }

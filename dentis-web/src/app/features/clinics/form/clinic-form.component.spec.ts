@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpErrorResponse } from '@angular/common/http';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { ClinicFormComponent } from './clinic-form.component';
 import { ClinicService } from '../../../core/services/clinic.service';
 import { ApiResponse } from '../../../core/models/api.model';
@@ -75,6 +76,31 @@ describe('ClinicFormComponent', () => {
 
     expect(clinicServiceSpy.updateClinic).toHaveBeenCalled();
     expect(routerSpy.navigate).toHaveBeenCalledWith(['/clinics']);
+  });
+
+  it('should show formatted backend validation error on save failure', async () => {
+    await configure(null);
+    clinicServiceSpy.createClinic.and.returnValue(
+      throwError(() => new HttpErrorResponse({
+        status: 400,
+        statusText: 'Bad Request',
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Request validation failed',
+          fieldErrors: [
+            {
+              field: 'email',
+              message: 'debe tener un formato válido'
+            }
+          ]
+        }
+      }))
+    );
+
+    component.form.patchValue({ name: 'Dental Sur', email: 'clinic@dentis.dev' });
+    component.save();
+
+    expect(component.errorMessage).toBe('email: debe tener un formato válido');
   });
 });
 

@@ -25,12 +25,8 @@ VERIFY_DEPLOYMENT="${VERIFY_DEPLOYMENT:-true}"
 export AWS_PROFILE="$AWS_PROFILE_NAME"
 export AWS_DEFAULT_PROFILE="$AWS_PROFILE_NAME"
 
-# ── Bypass corporate proxy (Zscaler) for AWS/EC2 traffic ─────────────────────
-# Zscaler injects HTTP_PROXY into every terminal session; when disconnected
-# from the corporate VPN the proxy host is unreachable and all AWS calls fail.
-unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy
-export NO_PROXY="localhost,127.0.0.1,::1,.amazonaws.com,.aws.amazon.com"
-export no_proxy="$NO_PROXY"
+# Ensure AWS/Terraform/SSH commands do not inherit shell proxy settings.
+unset HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy
 
 for cmd in aws terraform ssh scp curl; do
   command -v "$cmd" >/dev/null 2>&1 || { echo "[ERROR] Required command not found: $cmd" >&2; exit 1; }
