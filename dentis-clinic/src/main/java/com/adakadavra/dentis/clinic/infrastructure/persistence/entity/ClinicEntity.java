@@ -3,6 +3,7 @@ package com.adakadavra.dentis.clinic.infrastructure.persistence.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
+import org.springframework.data.domain.Persistable;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -16,7 +17,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ClinicEntity {
+public class ClinicEntity implements Persistable<UUID> {
 
     @Id
     @UuidGenerator
@@ -66,6 +67,12 @@ public class ClinicEntity {
     @PreUpdate
     void preUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    @Override
+    @Transient
+    public boolean isNew() {
+        return createdAt == null;
     }
 }
 

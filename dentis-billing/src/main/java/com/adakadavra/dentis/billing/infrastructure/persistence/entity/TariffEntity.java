@@ -4,6 +4,7 @@ import com.adakadavra.dentis.billing.domain.model.TariffCategory;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
+import org.springframework.data.domain.Persistable;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -18,7 +19,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class TariffEntity {
+public class TariffEntity implements Persistable<UUID> {
 
     @Id
     @UuidGenerator
@@ -48,5 +49,15 @@ public class TariffEntity {
     @Column(name = "active", nullable = false)
     @Builder.Default
     private boolean active = true;
+
+    @Transient
+    @Builder.Default
+    private boolean isNew = true;
+
+    @PostLoad
+    void markNotNew() { this.isNew = false; }
+
+    @Override
+    public boolean isNew() { return isNew; }
 }
 

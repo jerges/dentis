@@ -32,7 +32,16 @@ import { ShellTopbarComponent } from './shared/components/shell-topbar/shell-top
     </mat-sidenav-container>
   `,
   styles: [`
-    .shell-container { height: 100vh; background: transparent; }
+    :host {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .shell-container {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+    }
     .sidenav {
       width: 280px;
       display: flex;
@@ -42,9 +51,15 @@ import { ShellTopbarComponent } from './shared/components/shell-topbar/shell-top
       color: var(--dentis-sidenav-text);
       box-shadow: 22px 0 48px rgba(15, 23, 42, 0.22);
     }
+    mat-sidenav-content {
+      display: flex !important;
+      flex-direction: column;
+    }
     .main-content {
-      padding: 28px;
-      min-height: calc(100vh - 64px);
+      flex: 1 1 auto;
+      min-height: 0;
+      padding: clamp(16px, 2vh, 28px) clamp(16px, 2vw, 28px);
+      overflow-y: auto;
       background: transparent;
     }
   `]

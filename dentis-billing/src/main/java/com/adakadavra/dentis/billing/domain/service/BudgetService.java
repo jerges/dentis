@@ -1,12 +1,17 @@
 package com.adakadavra.dentis.billing.domain.service;
 
-import com.adakadavra.dentis.billing.domain.model.*;
+import com.adakadavra.dentis.billing.domain.model.Budget;
+import com.adakadavra.dentis.billing.domain.model.BudgetStatus;
+import com.adakadavra.dentis.billing.domain.model.BudgetSummary;
+import com.adakadavra.dentis.billing.domain.model.PaymentSummaryStatus;
 import com.adakadavra.dentis.billing.domain.repository.BudgetRepository;
 import com.adakadavra.dentis.billing.domain.repository.PaymentRepository;
 import com.adakadavra.dentis.billing.domain.repository.TariffRepository;
 import com.adakadavra.dentis.common.exception.BusinessRuleException;
 import com.adakadavra.dentis.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,13 +58,17 @@ public class BudgetService {
                 .status(balance.compareTo(BigDecimal.ZERO) <= 0
                         ? PaymentSummaryStatus.PAID
                         : totalPaid.compareTo(BigDecimal.ZERO) > 0
-                            ? PaymentSummaryStatus.PARTIALLY_PAID
-                            : PaymentSummaryStatus.PENDING)
+                          ? PaymentSummaryStatus.PARTIALLY_PAID
+                          : PaymentSummaryStatus.PENDING)
                 .build();
     }
 
     public Budget findById(UUID id) {
         return findBudgetOrThrow(id);
+    }
+
+    public Page<Budget> findByPatientId(UUID patientId, Pageable pageable) {
+        return budgetRepository.findByPatientId(patientId, pageable);
     }
 
     private void validateBudgetItems(Budget budget) {

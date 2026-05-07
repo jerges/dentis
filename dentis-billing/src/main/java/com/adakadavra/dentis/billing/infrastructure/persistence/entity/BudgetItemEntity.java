@@ -4,6 +4,7 @@ import com.adakadavra.dentis.billing.domain.model.ProcedurePaymentStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
+import org.springframework.data.domain.Persistable;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -16,7 +17,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class BudgetItemEntity {
+public class BudgetItemEntity implements Persistable<UUID> {
 
     @Id
     @UuidGenerator
@@ -51,5 +52,15 @@ public class BudgetItemEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_status", nullable = false, length = 20)
     private ProcedurePaymentStatus paymentStatus;
+
+    @Transient
+    @Builder.Default
+    private boolean isNew = true;
+
+    @PostLoad
+    void markNotNew() { this.isNew = false; }
+
+    @Override
+    public boolean isNew() { return isNew; }
 }
 

@@ -29,14 +29,11 @@ public class ClinicalRecordService {
             );
         }
         ClinicalRecord record = ClinicalRecord.builder()
-                .id(UUID.randomUUID())
                 .patientId(patientId)
                 .odontogram(new ArrayList<>())
                 .evolutions(new ArrayList<>())
                 .diagnoses(new ArrayList<>())
                 .treatmentPlans(new ArrayList<>())
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
                 .build();
         return clinicalRecordRepository.save(record);
     }

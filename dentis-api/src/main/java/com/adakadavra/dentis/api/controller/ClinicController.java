@@ -1,5 +1,7 @@
 package com.adakadavra.dentis.api.controller;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.adakadavra.dentis.api.security.entity.User;
 import com.adakadavra.dentis.api.security.entity.UserRole;
 import com.adakadavra.dentis.api.security.repository.UserRepository;
@@ -194,6 +196,20 @@ public class ClinicController {
 
         @Pattern(regexp = "^(ADMIN|MEDICO)$", message = "Role must be ADMIN or MEDICO")
         private final String role;
+
+        @JsonCreator
+        public CreateClinicUserRequest(
+                @JsonProperty("username") String username,
+                @JsonProperty("email") String email,
+                @JsonProperty("password") String password,
+                @JsonProperty("fullName") String fullName,
+                @JsonProperty("role") String role) {
+            this.username = username;
+            this.email = email;
+            this.password = password;
+            this.fullName = fullName;
+            this.role = role;
+        }
     }
 }
 

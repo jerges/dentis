@@ -34,7 +34,6 @@ public class PaymentService {
         validatePaymentAmount(payment, budget);
 
         Payment withTimestamp = Payment.builder()
-                .id(UUID.randomUUID())
                 .patientId(payment.getPatientId())
                 .budgetId(payment.getBudgetId())
                 .amount(payment.getAmount())

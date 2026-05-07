@@ -11,6 +11,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 
 import java.util.List;
 
@@ -51,6 +52,16 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(AccessDeniedException ex) {
         ApiError error = ApiError.builder().code("ACCESS_DENIED").message("Access denied").build();
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error(error));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
+        log.warn("Invalid request body", ex);
+        ApiError error = ApiError.builder()
+                .code("INVALID_REQUEST_BODY")
+                .message("Malformed or invalid request body")
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(error));
     }
 
     @ExceptionHandler(Exception.class)

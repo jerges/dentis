@@ -2,7 +2,8 @@ package com.adakadavra.dentis.billing.domain.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.With;
 
 import java.math.BigDecimal;
@@ -10,21 +11,22 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Getter
+@Data
 @Builder
 @With
+@NoArgsConstructor
 @AllArgsConstructor
 public class BudgetItem {
 
-    private final UUID id;
-    private final UUID tariffId;
-    private final String description;
-    private final int quantity;
-    private final BigDecimal unitPrice;
-    private final BigDecimal discountPercentage;
-    private final boolean performed;
-    private final LocalDateTime performedAt;
-    private final ProcedurePaymentStatus paymentStatus;
+    private UUID id;
+    private UUID tariffId;
+    private String description;
+    private int quantity;
+    private BigDecimal unitPrice;
+    private BigDecimal discountPercentage;
+    private Boolean performed;
+    private LocalDateTime performedAt;
+    private ProcedurePaymentStatus paymentStatus;
 
     public BigDecimal totalPrice() {
         return unitPrice.multiply(BigDecimal.valueOf(quantity));

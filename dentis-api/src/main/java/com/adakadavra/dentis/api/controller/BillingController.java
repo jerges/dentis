@@ -8,6 +8,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -66,5 +68,12 @@ public class BillingController {
     @Operation(summary = "List payments for a patient")
     public ResponseEntity<ApiResponse<List<Payment>>> getPaymentsByPatient(@PathVariable UUID patientId) {
         return ResponseEntity.ok(ApiResponse.ok(paymentService.findByPatientId(patientId)));
+    }
+
+    @GetMapping("/budgets/patient/{patientId}")
+    @Operation(summary = "List budgets for a patient")
+    public ResponseEntity<ApiResponse<Page<Budget>>> getBudgetsByPatient(
+            @PathVariable UUID patientId, Pageable pageable) {
+        return ResponseEntity.ok(ApiResponse.ok(budgetService.findByPatientId(patientId, pageable)));
     }
 }

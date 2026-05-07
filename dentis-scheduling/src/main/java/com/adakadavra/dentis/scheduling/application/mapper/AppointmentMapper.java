@@ -9,7 +9,7 @@ import org.mapstruct.*;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface AppointmentMapper {
 
-    @Mapping(target = "id", expression = "java(java.util.UUID.randomUUID())")
+    @Mapping(target = "id", ignore = true)
     @Mapping(target = "status", constant = "SCHEDULED")
     Appointment toDomain(CreateAppointmentRequest request);
 

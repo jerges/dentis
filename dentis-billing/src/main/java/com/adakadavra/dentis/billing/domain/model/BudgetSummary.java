@@ -1,18 +1,22 @@
 package com.adakadavra.dentis.billing.domain.model;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
-@Getter
+@Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class BudgetSummary {
 
-    private final UUID budgetId;
-    private final BigDecimal grandTotal;
-    private final BigDecimal totalPaid;
-    private final BigDecimal balance;
-    private final PaymentSummaryStatus status;
+    private UUID budgetId;
+    private BigDecimal grandTotal;
+    private BigDecimal totalPaid;
+    private BigDecimal balance;
+    private PaymentSummaryStatus status;
 }

@@ -4,6 +4,7 @@ import com.adakadavra.dentis.clinical.domain.model.ToothCondition;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
+import org.springframework.data.domain.Persistable;
 
 import java.util.UUID;
 
@@ -14,7 +15,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class OdontogramToothEntity {
+public class OdontogramToothEntity implements Persistable<UUID> {
 
     @Id
     @UuidGenerator
@@ -37,5 +38,18 @@ public class OdontogramToothEntity {
 
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
-}
 
+    @Transient
+    @Builder.Default
+    private boolean isNew = true;
+
+    @PostLoad
+    void markNotNew() {
+        this.isNew = false;
+    }
+
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+}

@@ -1,19 +1,22 @@
 package com.adakadavra.dentis.clinic.application.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
-@Getter
+@Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class ClinicUserResponse {
 
-    private final UUID id;
-    private final String username;
-    private final String email;
-    private final String fullName;
-    private final String role;
-    private final boolean active;
+    private UUID id;
+    private String username;
+    private String email;
+    private String fullName;
+    private String role;
+    private boolean active;
 }
-

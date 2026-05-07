@@ -5,6 +5,7 @@ import com.adakadavra.dentis.patient.domain.model.Sex;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
+import org.springframework.data.domain.Persistable;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -20,7 +21,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PatientEntity {
+public class PatientEntity implements Persistable<UUID> {
 
     @Id
     @UuidGenerator
@@ -109,5 +110,11 @@ public class PatientEntity {
     @PreUpdate
     void preUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    @Override
+    @Transient
+    public boolean isNew() {
+        return id == null;
     }
 }

@@ -41,7 +41,7 @@ public class BudgetEntityMapper {
                         .quantity(item.getQuantity())
                         .unitPrice(item.getUnitPrice())
                         .discountPercentage(item.getDiscountPercentage() == null ? BigDecimal.ZERO : item.getDiscountPercentage())
-                        .performed(item.isPerformed())
+                        .performed(Boolean.TRUE.equals(item.getPerformed()))
                         .performedAt(item.getPerformedAt())
                         .paymentStatus(item.getPaymentStatus() == null ? ProcedurePaymentStatus.PENDING : item.getPaymentStatus())
                         .build();

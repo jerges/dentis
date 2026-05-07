@@ -3,37 +3,40 @@ package com.adakadavra.dentis.clinic.application.dto;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-@Getter
+@Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class CreateClinicRequest {
 
     @NotBlank
     @Size(max = 200)
-    private final String name;
+    private String name;
 
     @Size(max = 20)
-    private final String nif;
+    private String nif;
 
     @Size(max = 300)
-    private final String address;
+    private String address;
 
     @Size(max = 100)
-    private final String city;
+    private String city;
 
     @Size(max = 100)
-    private final String province;
+    private String province;
 
     @Size(max = 10)
-    private final String zipCode;
+    private String zipCode;
 
     @Size(max = 20)
-    private final String phone;
+    private String phone;
 
     @Email
     @Size(max = 150)
-    private final String email;
+    private String email;
 }
-

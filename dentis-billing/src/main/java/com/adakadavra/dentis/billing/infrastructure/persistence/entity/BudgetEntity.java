@@ -4,6 +4,7 @@ import com.adakadavra.dentis.billing.domain.model.BudgetStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
+import org.springframework.data.domain.Persistable;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -17,7 +18,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class BudgetEntity {
+public class BudgetEntity implements Persistable<UUID> {
 
     @Id
     @UuidGenerator
@@ -49,5 +50,11 @@ public class BudgetEntity {
     @OneToMany(mappedBy = "budget", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<BudgetItemEntity> items = new ArrayList<>();
+
+    @Override
+    @Transient
+    public boolean isNew() {
+        return createdAt == null;
+    }
 }
 

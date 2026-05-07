@@ -4,6 +4,7 @@ import com.adakadavra.dentis.billing.domain.model.PaymentMethod;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
+import org.springframework.data.domain.Persistable;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -19,7 +20,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PaymentEntity {
+public class PaymentEntity implements Persistable<UUID> {
 
     @Id
     @UuidGenerator
@@ -47,5 +48,15 @@ public class PaymentEntity {
 
     @Column(name = "paid_at", nullable = false)
     private LocalDateTime paidAt;
+
+    @Transient
+    @Builder.Default
+    private boolean isNew = true;
+
+    @PostLoad
+    void markNotNew() { this.isNew = false; }
+
+    @Override
+    public boolean isNew() { return isNew; }
 }
 

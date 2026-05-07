@@ -4,6 +4,7 @@ import com.adakadavra.dentis.clinical.domain.model.TreatmentPlanStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
+import org.springframework.data.domain.Persistable;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -17,7 +18,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class TreatmentPlanEntity {
+public class TreatmentPlanEntity implements Persistable<UUID> {
 
     @Id
     @UuidGenerator
@@ -53,5 +54,18 @@ public class TreatmentPlanEntity {
     @OneToMany(mappedBy = "treatmentPlan", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<TreatmentProcedureEntity> procedures = new ArrayList<>();
-}
 
+    @Transient
+    @Builder.Default
+    private boolean isNew = true;
+
+    @PostLoad
+    void markNotNew() {
+        this.isNew = false;
+    }
+
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+}

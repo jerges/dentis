@@ -11,7 +11,6 @@ import java.util.UUID;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface PatientMapper {
 
-    @Mapping(target = "id", expression = "java(java.util.UUID.randomUUID())")
     @Mapping(target = "active", constant = "true")
     Patient toDomain(CreatePatientRequest request);
 

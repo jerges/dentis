@@ -3,6 +3,7 @@ package com.adakadavra.dentis.clinical.infrastructure.persistence.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
+import org.springframework.data.domain.Persistable;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -16,7 +17,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ClinicalRecordEntity {
+public class ClinicalRecordEntity implements Persistable<UUID> {
 
     @Id
     @UuidGenerator
@@ -47,5 +48,10 @@ public class ClinicalRecordEntity {
     @OneToMany(mappedBy = "clinicalRecord", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<TreatmentPlanEntity> treatmentPlans = new ArrayList<>();
-}
 
+    @Override
+    @Transient
+    public boolean isNew() {
+        return createdAt == null;
+    }
+}

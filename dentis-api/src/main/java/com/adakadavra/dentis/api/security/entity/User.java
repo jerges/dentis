@@ -3,6 +3,7 @@ package com.adakadavra.dentis.api.security.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
+import org.springframework.data.domain.Persistable;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -19,7 +20,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class User implements UserDetails {
+public class User implements UserDetails, Persistable<UUID> {
 
     @Id
     @UuidGenerator
@@ -72,4 +73,10 @@ public class User implements UserDetails {
 
     @PrePersist
     void prePersist() { createdAt = LocalDateTime.now(); }
+
+    @Override
+    @Transient
+    public boolean isNew() {
+        return id == null;
+    }
 }

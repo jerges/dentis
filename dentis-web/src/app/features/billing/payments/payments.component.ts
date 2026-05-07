@@ -8,7 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { BillingService } from '../../../core/services/billing.service';
 import { Payment } from '../../../core/models/billing.model';
@@ -57,7 +57,7 @@ import { Payment } from '../../../core/models/billing.model';
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Método de pago *</mat-label>
-                <mat-select formControlName="method">
+                <mat-select formControlName="paymentMethod">
                   <mat-option value="CASH">Efectivo</mat-option>
                   <mat-option value="BANK_TRANSFER">Transferencia</mat-option>
                   <mat-option value="CREDIT_CARD">Tarjeta Crédito</mat-option>
@@ -67,7 +67,7 @@ import { Payment } from '../../../core/models/billing.model';
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Referencia</mat-label>
-                <input matInput formControlName="reference" />
+                <input matInput formControlName="invoiceReference" />
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Notas</mat-label>
@@ -137,8 +137,8 @@ export class PaymentsComponent {
     budgetId: ['', Validators.required],
     patientId: ['', Validators.required],
     amount: [null, [Validators.required, Validators.min(0.01)]],
-    method: ['CASH', Validators.required],
-    reference: [''],
+    paymentMethod: ['CASH', Validators.required],
+    invoiceReference: [''],
     notes: ['']
   });
 
@@ -151,7 +151,7 @@ export class PaymentsComponent {
       next: (p) => {
         this.dataSource.data = [p, ...this.dataSource.data];
         this.snack.open('Pago registrado', 'OK', { duration: 3000 });
-        this.form.reset({ method: 'CASH' });
+        this.form.reset({ paymentMethod: 'CASH' });
         this.showForm = false;
         this.loading = false;
       },

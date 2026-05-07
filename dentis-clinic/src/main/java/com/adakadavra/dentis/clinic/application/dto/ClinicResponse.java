@@ -1,27 +1,31 @@
 package com.adakadavra.dentis.clinic.application.dto;
 
 import com.adakadavra.dentis.clinic.domain.model.Clinic;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Getter
+@Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class ClinicResponse {
 
-    private final UUID id;
-    private final String name;
-    private final String nif;
-    private final String address;
-    private final String city;
-    private final String province;
-    private final String zipCode;
-    private final String phone;
-    private final String email;
-    private final boolean active;
-    private final LocalDateTime createdAt;
+    private UUID id;
+    private String name;
+    private String nif;
+    private String address;
+    private String city;
+    private String province;
+    private String zipCode;
+    private String phone;
+    private String email;
+    private boolean active;
+    private LocalDateTime createdAt;
 
     public static ClinicResponse from(Clinic clinic) {
         return ClinicResponse.builder()
@@ -39,4 +43,3 @@ public class ClinicResponse {
                 .build();
     }
 }
-

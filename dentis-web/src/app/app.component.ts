@@ -8,10 +8,9 @@ import { RouterOutlet } from '@angular/router';
   template: `<router-outlet />`,
   styles: [`
     :host {
-      display: flex;
-      flex: 1 1 auto;
+      display: block;
       width: 100%;
-      min-height: 100vh;
+      height: 100%;
     }
   `]
 })

@@ -3,6 +3,7 @@ package com.adakadavra.dentis.clinical.infrastructure.persistence.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
+import org.springframework.data.domain.Persistable;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -14,7 +15,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ClinicalEvolutionEntity {
+public class ClinicalEvolutionEntity implements Persistable<UUID> {
 
     @Id
     @UuidGenerator
@@ -39,5 +40,15 @@ public class ClinicalEvolutionEntity {
 
     @Column(name = "recorded_at", nullable = false)
     private LocalDateTime recordedAt;
+
+    @Transient
+    @Builder.Default
+    private boolean isNew = true;
+
+    @PostLoad
+    void markNotNew() { this.isNew = false; }
+
+    @Override
+    public boolean isNew() { return isNew; }
 }
 

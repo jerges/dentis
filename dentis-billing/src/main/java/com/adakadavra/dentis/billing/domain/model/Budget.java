@@ -2,7 +2,8 @@ package com.adakadavra.dentis.billing.domain.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.With;
 
 import java.math.BigDecimal;
@@ -10,21 +11,22 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-@Getter
+@Data
 @Builder
 @With
+@NoArgsConstructor
 @AllArgsConstructor
 public class Budget {
 
-    private final UUID id;
-    private final UUID patientId;
-    private final UUID treatmentPlanId;
-    private final UUID dentistId;
-    private final List<BudgetItem> items;
-    private final BudgetStatus status;
-    private final String notes;
-    private final LocalDateTime createdAt;
-    private final LocalDateTime approvedAt;
+    private UUID id;
+    private UUID patientId;
+    private UUID treatmentPlanId;
+    private UUID dentistId;
+    private List<BudgetItem> items;
+    private BudgetStatus status;
+    private String notes;
+    private LocalDateTime createdAt;
+    private LocalDateTime approvedAt;
 
     public BigDecimal subtotal() {
         return items.stream()

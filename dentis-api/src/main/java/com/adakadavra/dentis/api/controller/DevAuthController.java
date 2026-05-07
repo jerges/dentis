@@ -5,6 +5,7 @@ import com.adakadavra.dentis.common.response.ApiError;
 import com.adakadavra.dentis.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
@@ -39,7 +40,7 @@ public class DevAuthController {
     @PostMapping("/login")
     @Operation(summary = "[DEV] Authenticate with real credentials and get JWT token")
     public ResponseEntity<ApiResponse<AuthController.TokenResponse>> login(
-            @RequestBody AuthController.LoginRequest request) {
+            @Valid @RequestBody AuthController.LoginRequest request) {
 
         UserDetails userDetails;
         try {
