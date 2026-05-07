@@ -20,6 +20,20 @@ provider "aws" {
   }
 }
 
+# Find an AZ that supports the requested instance type (avoids us-east-1e gaps)
+data "aws_ec2_instance_type_offerings" "available" {
+  filter {
+    name   = "instance-type"
+    values = [var.instance_type]
+  }
+  location_type = "availability-zone"
+}
+
+locals {
+  # Pick first AZ that supports the instance type, or fall back to var.availability_zone
+  resolved_az = var.availability_zone != null ? var.availability_zone : tolist(data.aws_ec2_instance_type_offerings.available.locations)[0]
+}
+
 # Get latest Amazon Linux 2023 AMI
 data "aws_ami" "amazon_linux_2023" {
   most_recent = true
@@ -29,11 +43,26 @@ data "aws_ami" "amazon_linux_2023" {
     name   = "name"
     values = ["al2023-ami-*"]
   }
+
+  filter {
+    name   = "architecture"
+    values = ["x86_64"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  filter {
+    name   = "root-device-type"
+    values = ["ebs"]
+  }
 }
 
 # VPC
 resource "aws_vpc" "dev" {
-  cidr_block           = "10.60.0.0/16"
+  cidr_block           = var.vpc_cidr
   enable_dns_support   = true
   enable_dns_hostnames = true
 
@@ -54,7 +83,8 @@ resource "aws_internet_gateway" "dev" {
 # Public Subnet
 resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.dev.id
-  cidr_block              = "10.60.1.0/24"
+  cidr_block              = var.public_subnet_cidr
+  availability_zone       = local.resolved_az
   map_public_ip_on_launch = true
 
   tags = {
@@ -96,18 +126,18 @@ resource "aws_security_group" "ec2" {
   }
 
   ingress {
-    from_port   = 80
-    to_port     = 80
+    from_port   = var.web_port
+    to_port     = var.web_port
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "HTTP"
+    cidr_blocks = [var.web_allowed_cidr]
+    description = "Frontend HTTP"
   }
 
   ingress {
-    from_port   = 8080
-    to_port     = 8080
+    from_port   = var.app_port
+    to_port     = var.app_port
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = [var.app_allowed_cidr]
     description = "Backend"
   }
 
@@ -179,17 +209,30 @@ resource "aws_instance" "dev" {
   iam_instance_profile        = aws_iam_instance_profile.ec2.name
   associate_public_ip_address = true
 
+  root_block_device {
+    volume_size           = var.root_volume_size
+    volume_type           = "gp3"
+    delete_on_termination = true
+  }
+
   # Install Docker and ensure SSM Agent is running
   user_data = base64encode(<<-EOF
     #!/bin/bash
     set -euo pipefail
     yum update -y
     yum install -y docker git amazon-ssm-agent
-    systemctl start docker
-    systemctl enable docker
-    systemctl enable amazon-ssm-agent
-    systemctl start amazon-ssm-agent
+    systemctl enable --now docker
+    systemctl enable --now amazon-ssm-agent
     usermod -a -G docker ec2-user
+    mkdir -p /opt/dentis
+    chown ec2-user:ec2-user /opt/dentis
+
+    # Install docker compose v2 plugin (not available in AL2023 default repos)
+    mkdir -p /usr/local/lib/docker/cli-plugins
+    curl -SL \
+      "https://github.com/docker/compose/releases/download/v2.27.1/docker-compose-linux-x86_64" \
+      -o /usr/local/lib/docker/cli-plugins/docker-compose
+    chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
   EOF
   )
 

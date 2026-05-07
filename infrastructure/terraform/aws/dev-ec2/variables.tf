@@ -19,7 +19,7 @@ variable "app_name" {
 variable "instance_type" {
   description = "EC2 instance type"
   type        = string
-  default     = "t2.micro"
+  default     = "t2.small"
 }
 
 variable "root_volume_size" {
