@@ -17,6 +17,7 @@ public class Patient {
     private final UUID id;
     private final String firstName;
     private final String lastName;
+    private final DocumentType documentType;
     private final String idDocument;
     private final LocalDate birthDate;
     private final Sex sex;

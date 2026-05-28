@@ -14,6 +14,7 @@ public interface PatientEntityMapper {
     @Mapping(target = "city", source = "address.city")
     @Mapping(target = "state", source = "address.state")
     @Mapping(target = "zipCode", source = "address.zipCode")
+    @Mapping(target = "representativeNotApplicable", source = "representative.notApplicable")
     @Mapping(target = "representativeFullName", source = "representative.fullName")
     @Mapping(target = "representativeIdDocument", source = "representative.idDocument")
     @Mapping(target = "representativeRelationship", source = "representative.relationship")
@@ -43,8 +44,12 @@ public interface PatientEntityMapper {
     }
 
     default Representative buildRepresentative(PatientEntity entity) {
+        if (entity.isRepresentativeNotApplicable()) {
+            return Representative.builder().notApplicable(true).build();
+        }
         if (entity.getRepresentativeFullName() == null) return null;
         return Representative.builder()
+                .notApplicable(false)
                 .fullName(entity.getRepresentativeFullName())
                 .idDocument(entity.getRepresentativeIdDocument())
                 .relationship(entity.getRepresentativeRelationship())

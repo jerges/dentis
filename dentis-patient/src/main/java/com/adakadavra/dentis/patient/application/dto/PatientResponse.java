@@ -1,5 +1,6 @@
 package com.adakadavra.dentis.patient.application.dto;
 
+import com.adakadavra.dentis.patient.domain.model.DocumentType;
 import com.adakadavra.dentis.patient.domain.model.Gender;
 import com.adakadavra.dentis.patient.domain.model.Sex;
 import lombok.AllArgsConstructor;
@@ -20,6 +21,7 @@ public class PatientResponse {
     private String firstName;
     private String lastName;
     private String fullName;
+    private DocumentType documentType;
     private String idDocument;
     private LocalDate birthDate;
     private int age;

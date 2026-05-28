@@ -1,5 +1,6 @@
 package com.adakadavra.dentis.patient.infrastructure.persistence.entity;
 
+import com.adakadavra.dentis.patient.domain.model.DocumentType;
 import com.adakadavra.dentis.patient.domain.model.Gender;
 import com.adakadavra.dentis.patient.domain.model.Sex;
 import jakarta.persistence.*;
@@ -34,7 +35,11 @@ public class PatientEntity implements Persistable<UUID> {
     @Column(name = "last_name", nullable = false, length = 100)
     private String lastName;
 
-    @Column(name = "id_document", nullable = false, unique = true, length = 20)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "document_type", nullable = false, length = 20)
+    private DocumentType documentType;
+
+    @Column(name = "id_document", nullable = false, unique = true, length = 30)
     private String idDocument;
 
     @Column(name = "birth_date", nullable = false)
@@ -75,10 +80,14 @@ public class PatientEntity implements Persistable<UUID> {
     private String zipCode;
 
     // Representative embedded
+    @Column(name = "representative_not_applicable")
+    @Builder.Default
+    private boolean representativeNotApplicable = false;
+
     @Column(name = "representative_full_name", length = 200)
     private String representativeFullName;
 
-    @Column(name = "representative_id_document", length = 20)
+    @Column(name = "representative_id_document", length = 30)
     private String representativeIdDocument;
 
     @Column(name = "representative_relationship", length = 50)

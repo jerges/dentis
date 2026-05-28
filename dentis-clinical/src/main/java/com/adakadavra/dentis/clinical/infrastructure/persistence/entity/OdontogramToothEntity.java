@@ -1,5 +1,7 @@
 package com.adakadavra.dentis.clinical.infrastructure.persistence.entity;
 
+import com.adakadavra.dentis.clinical.domain.model.DentalArch;
+import com.adakadavra.dentis.clinical.domain.model.SpaceClosureStatus;
 import com.adakadavra.dentis.clinical.domain.model.ToothCondition;
 import jakarta.persistence.*;
 import lombok.*;
@@ -30,11 +32,23 @@ public class OdontogramToothEntity implements Persistable<UUID> {
     private int toothNumber;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "dental_arch", length = 20)
+    private DentalArch dentalArch;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "condition", nullable = false, length = 30)
     private ToothCondition condition;
 
     @Column(name = "affected_surfaces", length = 200)
     private String affectedSurfaces;
+
+    /** JSON-like serialisation: "MESIAL:CARIES,DISTAL:HEALTHY". */
+    @Column(name = "surface_conditions", columnDefinition = "TEXT")
+    private String surfaceConditions;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "space_closure_status", length = 20)
+    private SpaceClosureStatus spaceClosureStatus;
 
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;

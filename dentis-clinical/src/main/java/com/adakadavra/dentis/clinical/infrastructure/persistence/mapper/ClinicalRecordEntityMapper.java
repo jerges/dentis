@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.LinkedHashMap;
 
 @Component
 public class ClinicalRecordEntityMapper {
@@ -91,8 +92,11 @@ public class ClinicalRecordEntityMapper {
                 .id(tooth.getId())
                 .clinicalRecord(recordEntity)
                 .toothNumber(tooth.getToothNumber())
+                .dentalArch(tooth.getDentalArch())
                 .condition(tooth.getCondition())
                 .affectedSurfaces(serializeSurfaces(tooth.getAffectedSurfaces()))
+                .surfaceConditions(serializeSurfaceConditions(tooth.getSurfaceConditions()))
+                .spaceClosureStatus(tooth.getSpaceClosureStatus())
                 .notes(tooth.getNotes())
                 .build();
     }
@@ -101,8 +105,11 @@ public class ClinicalRecordEntityMapper {
         return OdontogramTooth.builder()
                 .id(entity.getId())
                 .toothNumber(entity.getToothNumber())
+                .dentalArch(entity.getDentalArch())
                 .condition(entity.getCondition())
                 .affectedSurfaces(deserializeSurfaces(entity.getAffectedSurfaces()))
+                .surfaceConditions(deserializeSurfaceConditions(entity.getSurfaceConditions()))
+                .spaceClosureStatus(entity.getSpaceClosureStatus())
                 .notes(entity.getNotes())
                 .build();
     }
@@ -235,6 +242,26 @@ public class ClinicalRecordEntityMapper {
         Set<ToothSurface> result = new LinkedHashSet<>();
         for (String token : serialized.split(",")) {
             result.add(ToothSurface.valueOf(token.trim()));
+        }
+        return result;
+    }
+
+    private String serializeSurfaceConditions(Map<ToothSurface, ToothCondition> map) {
+        if (map == null || map.isEmpty()) return null;
+        return map.entrySet().stream()
+                .map(e -> e.getKey().name() + ":" + e.getValue().name())
+                .sorted()
+                .collect(Collectors.joining(","));
+    }
+
+    private Map<ToothSurface, ToothCondition> deserializeSurfaceConditions(String serialized) {
+        if (serialized == null || serialized.isBlank()) return Collections.emptyMap();
+        Map<ToothSurface, ToothCondition> result = new LinkedHashMap<>();
+        for (String token : serialized.split(",")) {
+            String[] parts = token.trim().split(":");
+            if (parts.length == 2) {
+                result.put(ToothSurface.valueOf(parts[0]), ToothCondition.valueOf(parts[1]));
+            }
         }
         return result;
     }

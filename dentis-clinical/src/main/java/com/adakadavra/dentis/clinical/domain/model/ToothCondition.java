@@ -10,7 +10,10 @@ public enum ToothCondition {
     ROOT_CANAL,
     FRACTURE,
     MALFORMATION,
-    EXTRACTED,
+    /** Radicular rest — tooth crown is lost, only the root remains. */
+    RADICULAR_REST,
+    /** Defective filling — existing restoration is compromised or failed. */
+    DEFECTIVE_FILLING,
     ERUPTING,
     IMPACTED
 }

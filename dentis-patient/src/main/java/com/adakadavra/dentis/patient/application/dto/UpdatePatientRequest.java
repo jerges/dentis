@@ -1,5 +1,6 @@
 package com.adakadavra.dentis.patient.application.dto;
 
+import com.adakadavra.dentis.patient.domain.model.DocumentType;
 import com.adakadavra.dentis.patient.domain.model.Gender;
 import com.adakadavra.dentis.patient.domain.model.Sex;
 import jakarta.validation.Valid;
@@ -18,6 +19,8 @@ public class UpdatePatientRequest {
 
     private String firstName;
     private String lastName;
+    private DocumentType documentType;
+    private String idDocument;
     private LocalDate birthDate;
     private Sex sex;
     private Gender gender;
