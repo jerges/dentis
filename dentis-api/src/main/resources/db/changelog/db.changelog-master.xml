@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<migrationNote>
+    <message>Use db.changelog-master.yaml as the active Liquibase changelog.</message>
+</migrationNote>
+

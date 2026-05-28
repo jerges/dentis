@@ -1,0 +1,40 @@
+/.idea/
+*.iml
+
+# macOS
+.DS_Store
+
+# Java / Maven
+**/target/
+*.log
+
+# Frontend (Angular)
+dentis-web/node_modules/
+dentis-web/dist/
+dentis-web/.angular/
+dentis-web/coverage/
+package-lock.json
+
+# Environment/local files
+.env
+.env.*
+
+# Terraform local state and overrides
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.*
+**/terraform.tfvars
+**/*.auto.tfvars
+
+# SSH keys / certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.ppk
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+id_ecdsa
+id_ecdsa.pub

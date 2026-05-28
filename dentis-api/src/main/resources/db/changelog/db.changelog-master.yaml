@@ -1,0 +1,13 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-baseline-from-scratch
+      author: copilot
+      comment: "Fresh baseline schema and seed data"
+      changes:
+        - sqlFile:
+            path: ../migration/V1__baseline_from_scratch.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: false
+            endDelimiter: ";"
+

@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dentis-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-dentis_db}
+      POSTGRES_USER: ${DB_USER:-dentis}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dentis}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - dentis-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-dentis} -d ${DB_NAME:-dentis_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  liquibase:
+    image: liquibase/liquibase:4.24
+    container_name: dentis-liquibase
+    profiles:
+      - dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command:
+      - --search-path=/liquibase/changelog
+      - --changelog-file=db/changelog/db.changelog-master.yaml
+      - --url=jdbc:postgresql://postgres:5432/${DB_NAME:-dentis_db}
+      - --username=${DB_USER:-dentis}
+      - --password=${DB_PASSWORD:-dentis}
+      - update
+    volumes:
+      - ./dentis-api/src/main/resources:/liquibase/changelog:ro
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: dentis-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+    profiles:
+      - dev
+
+volumes:
+  dentis-pgdata:

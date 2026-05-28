@@ -1,0 +1,10 @@
+**/.git
+**/.idea
+**/*.iml
+**/target
+**/.mvn/wrapper/maven-wrapper.jar
+**/node_modules
+infrastructure/terraform
+.env
+.env.*
+!.env.example

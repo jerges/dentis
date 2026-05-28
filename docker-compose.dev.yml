@@ -1,0 +1,114 @@
+services:
+  web:
+    image: ${WEB_IMAGE:-dentis-dev-web:latest}
+    container_name: dentis-web
+    restart: unless-stopped
+    pull_policy: missing
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "${WEB_HOST_PORT:-8081}:80"
+    environment:
+      APP_PORT: "${APP_PORT:-8080}"
+      NGINX_APP_HOST: "app"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/ >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - dentis-network
+
+  app:
+    image: ${APP_IMAGE:-dentis-dev-backend:latest}
+    container_name: dentis-app
+    restart: unless-stopped
+    pull_policy: missing
+    depends_on:
+      postgres:
+        condition: service_healthy
+      liquibase:
+        condition: service_completed_successfully
+    ports:
+      - "${APP_HOST_PORT:-8080}:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: "dev"
+      SERVER_PORT: "8080"
+      DB_HOST: "postgres"
+      DB_PORT: "5432"
+      DB_NAME: "${DB_NAME:-dentis_db}"
+      DB_USER: "${DB_USER:-dentis}"
+      DB_PASSWORD: "${DB_PASSWORD:-dentis}"
+      MAIL_HOST: "${MAIL_HOST:-mailhog}"
+      MAIL_PORT: "${MAIL_PORT:-1025}"
+      MAIL_USERNAME: "${MAIL_USERNAME:-}"
+      MAIL_PASSWORD: "${MAIL_PASSWORD:-}"
+      JWT_SECRET: "${JWT_SECRET:-dentis-jwt-secret-key-minimum-256-bits-long-for-hs256}"
+      JWT_EXPIRATION_MS: "86400000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health >/dev/null 2>&1 || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
+    networks:
+      - dentis-network
+
+  liquibase:
+    image: liquibase/liquibase:4.24
+    container_name: dentis-liquibase
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command:
+      - --search-path=/liquibase/changelog
+      - --changelog-file=db/changelog/db.changelog-master.yaml
+      - --url=jdbc:postgresql://postgres:5432/${DB_NAME:-dentis_db}
+      - --username=${DB_USER:-dentis}
+      - --password=${DB_PASSWORD:-dentis}
+      - update
+    volumes:
+      - ./dentis-api/src/main/resources:/liquibase/changelog:ro
+    networks:
+      - dentis-network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: dentis-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: "${DB_NAME:-dentis_db}"
+      POSTGRES_USER: "${DB_USER:-dentis}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:-dentis}"
+    ports:
+      - "${DB_HOST_PORT:-5432}:5432"
+    volumes:
+      - dentis-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-dentis} -d ${DB_NAME:-dentis_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dentis-network
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: dentis-mailhog
+    restart: unless-stopped
+    ports:
+      - "${MAIL_SMTP_HOST_PORT:-1025}:1025"
+      - "${MAIL_UI_HOST_PORT:-8025}:8025"
+    networks:
+      - dentis-network
+
+volumes:
+  dentis-pgdata:
+
+networks:
+  dentis-network:
+    driver: bridge
+

@@ -1,0 +1,46 @@
+aws_region   = "us-east-1"
+environment  = "dev"
+app_name     = "dentis"
+
+# Restrict SSH to your public IP /32. Example: "186.12.34.56/32"
+ssh_allowed_cidr = "REPLACE_WITH_YOUR_PUBLIC_IP/32"
+
+# App access can stay open in dev. Restrict it if needed.
+app_allowed_cidr = "0.0.0.0/0"
+web_allowed_cidr = "0.0.0.0/0"
+
+instance_type          = "t2.small"
+root_volume_size = 30
+assign_eip       = true
+
+# Key pair options
+create_key_pair      = true
+ssh_public_key_path  = "~/.ssh/dentis-dev-ec2.pub"
+# create_key_pair = false
+# existing_key_pair_name = "my-existing-key"
+
+# Option A: private ECR
+# Example: "123456789012.dkr.ecr.us-east-1.amazonaws.com/dentis-dev-dentis"
+ecr_repository_url = "REPLACE_WITH_ECR_REPOSITORY_URL"
+app_image_tag      = "latest"
+
+# Frontend image in ECR
+web_ecr_repository_url = "REPLACE_WITH_WEB_ECR_REPOSITORY_URL"
+web_image_tag          = "latest"
+
+app_port = 8080
+web_port = 80
+
+db_name     = "dentis_db"
+db_user     = "dentis"
+db_password = "REPLACE_WITH_DEV_DB_PASSWORD"
+
+jwt_secret = "REPLACE_WITH_DEV_JWT_SECRET_MIN_32_CHARS"
+
+mail_host     = "mailhog"
+mail_port     = 1025
+mail_username = ""
+mail_password = ""
+
+spring_profiles_active = "dev"
+
