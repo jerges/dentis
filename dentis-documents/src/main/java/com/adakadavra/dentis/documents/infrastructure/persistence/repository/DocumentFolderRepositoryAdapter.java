@@ -34,6 +34,12 @@ public class DocumentFolderRepositoryAdapter implements DocumentFolderRepository
     }
 
     @Override
+    public List<DocumentFolder> findVisibleByClinicIdAndParentId(UUID clinicId, UUID parentId, UUID userId) {
+        return jpa.findVisibleByClinicIdAndParentId(clinicId, parentId, userId)
+                .stream().map(mapper::toDomain).toList();
+    }
+
+    @Override
     public List<DocumentFolder> findByClinicIdAndZone(UUID clinicId, DocumentZone zone) {
         return jpa.findByClinicIdAndZone(clinicId, zone).stream().map(mapper::toDomain).toList();
     }

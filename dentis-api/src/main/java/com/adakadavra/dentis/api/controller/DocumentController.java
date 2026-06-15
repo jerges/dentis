@@ -7,6 +7,7 @@ import com.adakadavra.dentis.api.security.service.TenantSecurityService;
 import com.adakadavra.dentis.documents.application.dto.*;
 import com.adakadavra.dentis.documents.domain.model.ClinicDocument;
 import com.adakadavra.dentis.documents.domain.model.DocumentFolder;
+import com.adakadavra.dentis.documents.domain.model.DocumentVisibility;
 import com.adakadavra.dentis.documents.domain.model.DocumentZone;
 import com.adakadavra.dentis.documents.domain.service.ClinicDocumentService;
 import com.adakadavra.dentis.documents.domain.service.DocumentFolderService;
@@ -57,7 +58,8 @@ public class DocumentController {
             throw new IllegalStateException("Only ADMIN can create knowledge-base folders");
         }
         DocumentFolder folder = folderService.createFolder(
-                clinicId, req.getParentId(), req.getName(), req.getZone(), user.getId());
+                clinicId, req.getParentId(), req.getName(), req.getZone(), user.getId(),
+                req.getVisibility());
         return toFolderResponse(folder);
     }
 
@@ -68,7 +70,8 @@ public class DocumentController {
                                              @RequestParam(required = false) UUID clinicId,
                                              @AuthenticationPrincipal User user) {
         UUID resolvedClinic = resolveClinicId(user, clinicId);
-        return folderService.listChildren(resolvedClinic, parentId)
+        boolean superAdmin = user.getRole() == UserRole.SUPER_ADMIN;
+        return folderService.listChildren(resolvedClinic, parentId, user.getId(), superAdmin)
                 .stream().map(this::toFolderResponse).toList();
     }
 
@@ -116,7 +119,8 @@ public class DocumentController {
         assertKbAccess(user, req.getFolderId());
         ClinicDocument doc = documentService.register(
                 clinicId, req.getFolderId(), req.getFileName(), req.getContentType(),
-                req.getS3Key(), req.getFileSize(), req.getDescription(), user.getId());
+                req.getS3Key(), req.getFileSize(), req.getDescription(), user.getId(),
+                req.getVisibility());
 
         if (documentService.isKnowledgeBaseFolder(req.getFolderId())) {
             ingestionService.ingestAsync(
@@ -133,7 +137,8 @@ public class DocumentController {
     public List<DocumentResponse> listDocuments(@RequestParam UUID folderId,
                                                  @AuthenticationPrincipal User user) {
         UUID clinicId = resolveClinicId(user, null);
-        return documentService.listByFolder(folderId, clinicId)
+        boolean superAdmin = user.getRole() == UserRole.SUPER_ADMIN;
+        return documentService.listByFolder(folderId, clinicId, user.getId(), superAdmin)
                 .stream().map(this::toDocumentResponse).toList();
     }
 
@@ -144,7 +149,8 @@ public class DocumentController {
                                           @RequestParam(required = false) UUID clinicId,
                                           @AuthenticationPrincipal User user) {
         UUID resolvedClinic = resolveClinicId(user, clinicId);
-        return documentService.search(resolvedClinic, q)
+        boolean superAdmin = user.getRole() == UserRole.SUPER_ADMIN;
+        return documentService.search(resolvedClinic, q, user.getId(), superAdmin)
                 .stream().map(this::toDocumentResponse).toList();
     }
 
@@ -195,6 +201,7 @@ public class DocumentController {
                 .s3Prefix(f.getS3Prefix())
                 .zone(f.getZone())
                 .system(f.isSystem())
+                .visibility(f.getVisibility())
                 .createdAt(f.getCreatedAt())
                 .build();
     }
@@ -208,6 +215,7 @@ public class DocumentController {
                 .fileSize(d.getFileSize())
                 .description(d.getDescription())
                 .indexedForIa(d.isIndexedForIa())
+                .visibility(d.getVisibility())
                 .uploadedAt(d.getUploadedAt())
                 .build();
     }

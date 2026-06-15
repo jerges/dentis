@@ -1,5 +1,6 @@
 package com.adakadavra.dentis.documents.application.dto;
 
+import com.adakadavra.dentis.documents.domain.model.DocumentVisibility;
 import com.adakadavra.dentis.documents.domain.model.DocumentZone;
 import lombok.Builder;
 import lombok.Data;
@@ -16,5 +17,6 @@ public class FolderResponse {
     private String s3Prefix;
     private DocumentZone zone;
     private boolean system;
+    private DocumentVisibility visibility;
     private LocalDateTime createdAt;
 }

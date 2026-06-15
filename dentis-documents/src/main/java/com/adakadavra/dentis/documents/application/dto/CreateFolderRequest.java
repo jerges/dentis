@@ -1,5 +1,6 @@
 package com.adakadavra.dentis.documents.application.dto;
 
+import com.adakadavra.dentis.documents.domain.model.DocumentVisibility;
 import com.adakadavra.dentis.documents.domain.model.DocumentZone;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -15,4 +16,6 @@ public class CreateFolderRequest {
     private String name;
     @NotNull
     private DocumentZone zone;
+    /** Defaults to PUBLIC when not provided. */
+    private DocumentVisibility visibility;
 }

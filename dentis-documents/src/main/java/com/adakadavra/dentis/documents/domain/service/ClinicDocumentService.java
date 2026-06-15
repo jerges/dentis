@@ -2,6 +2,7 @@ package com.adakadavra.dentis.documents.domain.service;
 
 import com.adakadavra.dentis.documents.domain.model.ClinicDocument;
 import com.adakadavra.dentis.documents.domain.model.DocumentFolder;
+import com.adakadavra.dentis.documents.domain.model.DocumentVisibility;
 import com.adakadavra.dentis.documents.domain.model.DocumentZone;
 import com.adakadavra.dentis.documents.domain.repository.ClinicDocumentRepository;
 import com.adakadavra.dentis.documents.domain.repository.DocumentFolderRepository;
@@ -36,7 +37,8 @@ public class ClinicDocumentService {
     @Transactional
     public ClinicDocument register(UUID clinicId, UUID folderId, String fileName,
                                    String contentType, String s3Key, Long fileSize,
-                                   String description, UUID uploadedBy) {
+                                   String description, UUID uploadedBy,
+                                   DocumentVisibility visibility) {
         DocumentFolder folder = folderRepo.findById(folderId)
                 .orElseThrow(() -> new NoSuchElementException("Folder not found"));
         assertBelongsToClinic(folder, clinicId);
@@ -52,18 +54,34 @@ public class ClinicDocumentService {
                 .uploadedBy(uploadedBy)
                 .uploadedAt(LocalDateTime.now())
                 .indexedForIa(false)
+                .visibility(visibility != null ? visibility : DocumentVisibility.PUBLIC)
                 .build());
     }
 
-    public List<ClinicDocument> listByFolder(UUID folderId, UUID clinicId) {
+    /**
+     * Lists documents in a folder visible to the requesting user.
+     * SUPER_ADMIN sees all; regular users see PUBLIC docs and their own PRIVATE ones.
+     */
+    public List<ClinicDocument> listByFolder(UUID folderId, UUID clinicId,
+                                             UUID userId, boolean superAdmin) {
         DocumentFolder folder = folderRepo.findById(folderId)
                 .orElseThrow(() -> new NoSuchElementException("Folder not found"));
         assertBelongsToClinic(folder, clinicId);
-        return documentRepo.findByFolderId(folderId);
+        if (superAdmin) {
+            return documentRepo.findByFolderId(folderId);
+        }
+        return documentRepo.findVisibleByFolderId(folderId, userId);
     }
 
-    public List<ClinicDocument> search(UUID clinicId, String query) {
-        return documentRepo.search(clinicId, query);
+    /**
+     * Full-text search scoped to a clinic. SUPER_ADMIN sees all; others see only visible docs.
+     */
+    public List<ClinicDocument> search(UUID clinicId, String query,
+                                       UUID userId, boolean superAdmin) {
+        if (superAdmin) {
+            return documentRepo.search(clinicId, query);
+        }
+        return documentRepo.searchVisible(clinicId, query, userId);
     }
 
     public ClinicDocument getDocument(UUID documentId, UUID clinicId) {
@@ -87,9 +105,11 @@ public class ClinicDocumentService {
         documentRepo.markIndexed(documentId);
     }
 
+    /** Returns true only for PUBLIC knowledge-base folders (PRIVATE KB folders are not indexed). */
     public boolean isKnowledgeBaseFolder(UUID folderId) {
         return folderRepo.findById(folderId)
-                .map(f -> f.getZone() == DocumentZone.KNOWLEDGE_BASE)
+                .map(f -> f.getZone() == DocumentZone.KNOWLEDGE_BASE
+                        && f.getVisibility() == DocumentVisibility.PUBLIC)
                 .orElse(false);
     }
 

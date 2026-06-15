@@ -39,7 +39,8 @@ public class CucumberSpringConfig {
             "db/changelog/changes/006-ia-vector.sql",
             "db/changelog/changes/007-ia-spring-ai-vector.sql",
             "db/changelog/changes/008-patient-document-type.sql",
-            "db/changelog/changes/009-documents.sql"
+            "db/changelog/changes/009-documents.sql",
+            "db/changelog/changes/010-folder-document-visibility.sql"
     );
 
     // pgvector/pgvector includes the vector extension required by migration 006

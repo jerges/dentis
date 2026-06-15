@@ -18,6 +18,7 @@ public class DocumentMapper {
                 .s3Prefix(e.getS3Prefix())
                 .zone(e.getZone())
                 .system(e.isSystemFolder())
+                .visibility(e.getVisibility())
                 .createdBy(e.getCreatedBy())
                 .createdAt(e.getCreatedAt())
                 .build();
@@ -32,6 +33,7 @@ public class DocumentMapper {
                 .s3Prefix(d.getS3Prefix())
                 .zone(d.getZone())
                 .systemFolder(d.isSystem())
+                .visibility(d.getVisibility())
                 .createdBy(d.getCreatedBy())
                 .createdAt(d.getCreatedAt())
                 .build();
@@ -50,6 +52,7 @@ public class DocumentMapper {
                 .uploadedBy(e.getUploadedBy())
                 .uploadedAt(e.getUploadedAt())
                 .indexedForIa(e.isIndexedForIa())
+                .visibility(e.getVisibility())
                 .build();
     }
 
@@ -66,6 +69,7 @@ public class DocumentMapper {
                 .uploadedBy(d.getUploadedBy())
                 .uploadedAt(d.getUploadedAt())
                 .indexedForIa(d.isIndexedForIa())
+                .visibility(d.getVisibility())
                 .build();
     }
 }

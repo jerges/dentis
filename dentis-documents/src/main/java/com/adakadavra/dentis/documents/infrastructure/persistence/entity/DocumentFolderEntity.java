@@ -1,5 +1,6 @@
 package com.adakadavra.dentis.documents.infrastructure.persistence.entity;
 
+import com.adakadavra.dentis.documents.domain.model.DocumentVisibility;
 import com.adakadavra.dentis.documents.domain.model.DocumentZone;
 import jakarta.persistence.*;
 import lombok.*;
@@ -45,6 +46,11 @@ public class DocumentFolderEntity implements Persistable<UUID> {
     @Column(name = "system_folder", nullable = false)
     @Builder.Default
     private boolean systemFolder = false;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "visibility", nullable = false, length = 10)
+    @Builder.Default
+    private DocumentVisibility visibility = DocumentVisibility.PUBLIC;
 
     @Column(name = "created_by")
     private UUID createdBy;

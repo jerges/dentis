@@ -24,6 +24,8 @@ public class DocumentFolder {
     private final DocumentZone zone;
     /** System folders cannot be renamed or deleted. */
     private final boolean system;
+    /** PUBLIC = visible to all clinic staff. PRIVATE = visible only to the creator. */
+    private final DocumentVisibility visibility;
     private final UUID createdBy;
     private final LocalDateTime createdAt;
 }

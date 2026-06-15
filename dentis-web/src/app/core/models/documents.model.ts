@@ -1,4 +1,5 @@
 export type DocumentZone = 'KNOWLEDGE_BASE' | 'GENERAL';
+export type DocumentVisibility = 'PUBLIC' | 'PRIVATE';
 
 export interface DocumentFolder {
   id: string;
@@ -7,6 +8,7 @@ export interface DocumentFolder {
   s3Prefix: string;
   zone: DocumentZone;
   system: boolean;
+  visibility: DocumentVisibility;
   createdAt: string;
 }
 
@@ -18,6 +20,7 @@ export interface ClinicDocument {
   fileSize: number | null;
   description: string | null;
   indexedForIa: boolean;
+  visibility: DocumentVisibility;
   uploadedAt: string;
 }
 
@@ -25,6 +28,7 @@ export interface CreateFolderRequest {
   parentId: string | null;
   name: string;
   zone: DocumentZone;
+  visibility: DocumentVisibility;
 }
 
 export interface PresignUploadRequest {
@@ -40,4 +44,5 @@ export interface RegisterDocumentRequest {
   s3Key: string;
   fileSize: number | null;
   description: string | null;
+  visibility: DocumentVisibility;
 }

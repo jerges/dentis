@@ -24,7 +24,7 @@ import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
 import { DocumentsService } from '../../../core/services/documents.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
-import { ClinicDocument, DocumentFolder, DocumentZone } from '../../../core/models/documents.model';
+import { ClinicDocument, DocumentFolder, DocumentVisibility, DocumentZone } from '../../../core/models/documents.model';
 
 interface FolderNode extends DocumentFolder {
   children?: FolderNode[];
@@ -129,6 +129,9 @@ interface FolderNode extends DocumentFolder {
                 @if (node.system) {
                   <mat-icon class="lock-icon" matTooltip="Carpeta de sistema — no eliminable">lock</mat-icon>
                 }
+                @if (node.visibility === 'PRIVATE') {
+                  <mat-icon class="private-icon" matTooltip="Carpeta privada — solo visible para ti">visibility_off</mat-icon>
+                }
                 @if (!node.system && canManageKb()) {
                   <button mat-icon-button class="folder-delete"
                           matTooltip="Eliminar carpeta"
@@ -180,6 +183,11 @@ interface FolderNode extends DocumentFolder {
           </mat-card-title>
           @if (selectedFolder()) {
             <div class="doc-panel-actions">
+              <select class="visibility-select" [(ngModel)]="uploadVisibility"
+                      matTooltip="Visibilidad del documento a subir">
+                <option value="PUBLIC">Público</option>
+                <option value="PRIVATE">Privado</option>
+              </select>
               <button mat-flat-button color="primary" (click)="triggerUpload()"
                       [disabled]="uploading()">
                 <mat-icon>upload</mat-icon>
@@ -230,6 +238,11 @@ interface FolderNode extends DocumentFolder {
                           <mat-icon>psychology</mat-icon> Indexado
                         </mat-chip>
                       }
+                      @if (doc.visibility === 'PRIVATE') {
+                        <mat-chip class="private-chip" matTooltip="Solo visible para ti">
+                          <mat-icon>visibility_off</mat-icon> Privado
+                        </mat-chip>
+                      }
                     </div>
                   </div>
                   <button mat-icon-button [matMenuTriggerFor]="docMenu" class="doc-menu-btn">
@@ -271,6 +284,13 @@ interface FolderNode extends DocumentFolder {
               @if (canManageKb()) {
                 <option value="KNOWLEDGE_BASE">Base de Conocimiento IA</option>
               }
+            </select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Visibilidad</mat-label>
+            <select matNativeControl [(ngModel)]="newFolderVisibility">
+              <option value="PUBLIC">Pública — visible para todo el personal de la clínica</option>
+              <option value="PRIVATE">Privada — solo visible para ti</option>
             </select>
           </mat-form-field>
         </mat-card-content>
@@ -327,6 +347,9 @@ interface FolderNode extends DocumentFolder {
     /* Chips */
     .ia-chip { background: #ede7f6 !important; color: #7c4dff !important; font-size: 11px; height: 20px; }
     .kb-badge { background: #7c4dff !important; color: white !important; font-size: 11px; height: 22px; }
+    .private-chip { background: #fce4ec !important; color: #c62828 !important; font-size: 11px; height: 20px; }
+    .private-icon { font-size: 16px; color: #ef9a9a; margin-left: 4px; }
+    .visibility-select { border: 1px solid #e0e0e0; border-radius: 4px; padding: 4px 8px; font-size: 13px; background: white; cursor: pointer; }
 
     /* Empty states */
     .empty-state { display: flex; flex-direction: column; align-items: center; padding: 48px 24px; color: #9e9e9e; gap: 12px; }
@@ -361,6 +384,8 @@ export class DocumentsManagerComponent implements OnInit {
   showNewFolderDialog = signal(false);
   newFolderName = '';
   newFolderZone: DocumentZone = 'GENERAL';
+  newFolderVisibility: DocumentVisibility = 'PUBLIC';
+  uploadVisibility: DocumentVisibility = 'PUBLIC';
 
   canManageKb = computed(() => {
     const role = this.auth.currentUser()?.role;
@@ -431,14 +456,19 @@ export class DocumentsManagerComponent implements OnInit {
   }
 
   openNewFolderDialog() { this.showNewFolderDialog.set(true); }
-  closeNewFolderDialog() { this.showNewFolderDialog.set(false); this.newFolderName = ''; }
+  closeNewFolderDialog() {
+    this.showNewFolderDialog.set(false);
+    this.newFolderName = '';
+    this.newFolderVisibility = 'PUBLIC';
+  }
 
   createFolder() {
     if (!this.newFolderName.trim()) return;
     this.svc.createFolder({
       parentId: this.selectedFolder()?.id ?? null,
       name: this.newFolderName.trim(),
-      zone: this.newFolderZone
+      zone: this.newFolderZone,
+      visibility: this.newFolderVisibility
     }).subscribe({
       next: () => { this.closeNewFolderDialog(); this.loadFolders(); },
       error: e => this.snack.open('Error al crear carpeta: ' + e.error?.message, 'Cerrar', { duration: 4000 })
@@ -466,7 +496,8 @@ export class DocumentsManagerComponent implements OnInit {
         this.svc.uploadToS3(uploadUrl, file).subscribe({
           next: () => this.svc.registerDocument({
             folderId, fileName: file.name, contentType: file.type,
-            s3Key, fileSize: file.size, description: null
+            s3Key, fileSize: file.size, description: null,
+            visibility: this.uploadVisibility
           }).subscribe({
             next: () => {
               this.uploading.set(false);

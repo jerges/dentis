@@ -1,5 +1,6 @@
 package com.adakadavra.dentis.documents.infrastructure.persistence.entity;
 
+import com.adakadavra.dentis.documents.domain.model.DocumentVisibility;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
@@ -56,6 +57,11 @@ public class ClinicDocumentEntity implements Persistable<UUID> {
     @Column(name = "indexed_for_ia", nullable = false)
     @Builder.Default
     private boolean indexedForIa = false;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "visibility", nullable = false, length = 10)
+    @Builder.Default
+    private DocumentVisibility visibility = DocumentVisibility.PUBLIC;
 
     @Transient
     @Builder.Default

@@ -26,4 +26,6 @@ public class ClinicDocument {
     private final LocalDateTime uploadedAt;
     /** True when IA has successfully vectorised this document. */
     private final boolean indexedForIa;
+    /** PUBLIC = visible to all clinic staff. PRIVATE = visible only to the uploader. */
+    private final DocumentVisibility visibility;
 }

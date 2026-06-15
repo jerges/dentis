@@ -2,6 +2,7 @@ package com.adakadavra.dentis.documents.domain.service;
 
 import com.adakadavra.dentis.documents.domain.model.ClinicDocument;
 import com.adakadavra.dentis.documents.domain.model.DocumentFolder;
+import com.adakadavra.dentis.documents.domain.model.DocumentVisibility;
 import com.adakadavra.dentis.documents.domain.model.DocumentZone;
 import com.adakadavra.dentis.documents.domain.repository.ClinicDocumentRepository;
 import com.adakadavra.dentis.documents.domain.repository.DocumentFolderRepository;
@@ -35,6 +36,7 @@ public class DocumentFolderService {
                         .s3Prefix("clinics/" + clinicId + "/knowledge-base/")
                         .zone(DocumentZone.KNOWLEDGE_BASE)
                         .system(true)
+                        .visibility(DocumentVisibility.PUBLIC)
                         .createdBy(createdBy)
                         .createdAt(LocalDateTime.now())
                         .build()));
@@ -42,7 +44,8 @@ public class DocumentFolderService {
 
     @Transactional
     public DocumentFolder createFolder(UUID clinicId, UUID parentId, String name,
-                                       DocumentZone zone, UUID createdBy) {
+                                       DocumentZone zone, UUID createdBy,
+                                       DocumentVisibility visibility) {
         if (folderRepo.existsByClinicIdAndParentIdAndName(clinicId, parentId, name)) {
             throw new IllegalArgumentException("A folder named '" + name + "' already exists here");
         }
@@ -59,13 +62,22 @@ public class DocumentFolderService {
                 .s3Prefix(parentPrefix + sanitize(name) + "/")
                 .zone(zone)
                 .system(false)
+                .visibility(visibility != null ? visibility : DocumentVisibility.PUBLIC)
                 .createdBy(createdBy)
                 .createdAt(LocalDateTime.now())
                 .build());
     }
 
-    public List<DocumentFolder> listChildren(UUID clinicId, UUID parentId) {
-        return folderRepo.findByClinicIdAndParentId(clinicId, parentId);
+    /**
+     * Lists child folders visible to the requesting user.
+     * SUPER_ADMIN sees all folders; regular users see PUBLIC folders and their own PRIVATE ones.
+     */
+    public List<DocumentFolder> listChildren(UUID clinicId, UUID parentId,
+                                             UUID userId, boolean superAdmin) {
+        if (superAdmin) {
+            return folderRepo.findByClinicIdAndParentId(clinicId, parentId);
+        }
+        return folderRepo.findVisibleByClinicIdAndParentId(clinicId, parentId, userId);
     }
 
     @Transactional

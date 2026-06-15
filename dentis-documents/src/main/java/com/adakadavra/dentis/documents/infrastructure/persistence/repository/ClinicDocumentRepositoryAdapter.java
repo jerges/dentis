@@ -33,6 +33,11 @@ public class ClinicDocumentRepositoryAdapter implements ClinicDocumentRepository
     }
 
     @Override
+    public List<ClinicDocument> findVisibleByFolderId(UUID folderId, UUID userId) {
+        return jpa.findVisibleByFolderId(folderId, userId).stream().map(mapper::toDomain).toList();
+    }
+
+    @Override
     public List<ClinicDocument> findByClinicId(UUID clinicId) {
         return jpa.findByClinicId(clinicId).stream().map(mapper::toDomain).toList();
     }
@@ -40,6 +45,11 @@ public class ClinicDocumentRepositoryAdapter implements ClinicDocumentRepository
     @Override
     public List<ClinicDocument> search(UUID clinicId, String query) {
         return jpa.fullTextSearch(clinicId, query).stream().map(mapper::toDomain).toList();
+    }
+
+    @Override
+    public List<ClinicDocument> searchVisible(UUID clinicId, String query, UUID userId) {
+        return jpa.fullTextSearchVisible(clinicId, query, userId).stream().map(mapper::toDomain).toList();
     }
 
     @Override
