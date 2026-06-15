@@ -42,6 +42,7 @@ id_ecdsa.pub
 # Claude Code local settings (project instructions in CLAUDE.md are tracked, but not local settings)
 .claude/settings.json
 .claude/settings.local.json
+.claude/worktrees/
 
 # Python cache (Lambda functions)
 **/__pycache__/
