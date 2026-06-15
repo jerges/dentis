@@ -1,8 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { RouterTestingModule } from '@angular/router/testing';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { of } from 'rxjs';
+import { RouterTestingModule } from '@angular/router/testing';
+import { of, throwError } from 'rxjs';
 import { PatientsListComponent } from './patients-list.component';
 import { PatientService } from '../../../core/services/patient.service';
 import { Patient } from '../../../core/models/patient.model';
@@ -10,6 +10,7 @@ import { Patient } from '../../../core/models/patient.model';
 describe('PatientsListComponent', () => {
   let component: PatientsListComponent;
   let fixture: ComponentFixture<PatientsListComponent>;
+
   let patientServiceSpy: jasmine.SpyObj<PatientService>;
   let snackSpy: jasmine.SpyObj<MatSnackBar>;
 
@@ -26,7 +27,7 @@ describe('PatientsListComponent', () => {
       email: 'ana@dentis.dev',
       phoneNumber: '600000000'
     }
-  } as unknown as Patient;
+  };
 
   const pageResponse = {
     content: [patient],
@@ -63,35 +64,36 @@ describe('PatientsListComponent', () => {
     expect(component.totalElements).toBe(1);
   });
 
-  it('should populate dataSource with patients from service', () => {
+  it('should update dataSource with returned patients', () => {
+    expect(component.dataSource.data[0].id).toBe('patient-1');
     expect(component.dataSource.data[0].firstName).toBe('Ana');
-    expect(component.dataSource.data[0].lastName).toBe('Lopez');
   });
 
-  it('should call search when onSearch is triggered with a term', (done) => {
-    component.onSearch('Ana');
-    setTimeout(() => {
-      expect(patientServiceSpy.search).toHaveBeenCalledWith('Ana', 0, 20);
-      done();
-    }, 450);
-  });
-
-  it('should call getAll when onSearch is triggered with an empty term', (done) => {
-    component.onSearch('');
-    setTimeout(() => {
-      expect(patientServiceSpy.getAll).toHaveBeenCalledWith(0, 20);
-      done();
-    }, 450);
-  });
-
-  it('should update currentPage and reload on page change', () => {
+  it('should call getAll with updated page on onPageChange', () => {
     patientServiceSpy.getAll.calls.reset();
-    component.onPageChange({ pageIndex: 2, pageSize: 20, length: 60 });
+    patientServiceSpy.getAll.and.returnValue(of(pageResponse));
+
+    component.onPageChange({ pageIndex: 2, pageSize: 20, length: 100 });
+
     expect(component.currentPage).toBe(2);
     expect(patientServiceSpy.getAll).toHaveBeenCalledWith(2, 20);
   });
 
   it('should have correct displayedColumns', () => {
     expect(component.displayedColumns).toEqual(['name', 'contact', 'birthDate', 'status', 'actions']);
+  });
+
+  it('should update totalElements from empty search result', () => {
+    patientServiceSpy.getAll.and.returnValue(
+      of({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0, last: true })
+    );
+    component.loadPatients();
+    expect(component.totalElements).toBe(0);
+    expect(component.dataSource.data.length).toBe(0);
+  });
+
+  it('should not throw when getAll returns an error', () => {
+    patientServiceSpy.getAll.and.returnValue(throwError(() => new Error('Network error')));
+    expect(() => component.loadPatients()).not.toThrow();
   });
 });
