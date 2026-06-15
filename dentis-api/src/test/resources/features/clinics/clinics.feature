@@ -54,3 +54,8 @@ Feature: Clinic Controller integration
     When clinic api deactivates clinic user as role "ADMIN"
     Then clinic response status should be 200
 
+  Scenario: ADMIN cannot manage users of another clinic
+    Given clinic api has two clinics with an admin for the first
+    When that admin tries to list users of the second clinic
+    Then clinic response status should be 403
+

@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.With;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -22,5 +23,9 @@ public class OdontogramTooth {
     private final int toothNumber;
     private final ToothCondition condition;
     private final Set<ToothSurface> affectedSurfaces;
+    private final Map<ToothSurface, ToothCondition> surfaceConditions;
+    private final SpaceStatus spaceStatus;
     private final String notes;
+    private final Set<RootFinding> rootFindings;
+    private final String rootNotes;
 }

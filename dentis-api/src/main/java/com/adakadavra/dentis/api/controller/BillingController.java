@@ -1,10 +1,12 @@
 package com.adakadavra.dentis.api.controller;
 
+import com.adakadavra.dentis.api.security.service.TenantSecurityService;
 import com.adakadavra.dentis.billing.domain.model.*;
 import com.adakadavra.dentis.billing.domain.service.BudgetService;
 import com.adakadavra.dentis.billing.domain.service.PaymentService;
 import com.adakadavra.dentis.billing.domain.service.TariffService;
 import com.adakadavra.dentis.common.response.ApiResponse;
+import com.adakadavra.dentis.patient.application.usecase.PatientUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -31,6 +33,20 @@ public class BillingController {
     private final BudgetService budgetService;
     private final PaymentService paymentService;
     private final TariffService tariffService;
+    private final PatientUseCase patientUseCase;
+    private final TenantSecurityService tenantSecurity;
+
+    private void requirePatientAccess(UUID patientId) {
+        tenantSecurity.currentClinicId()
+                .ifPresent(clinicId -> patientUseCase.validatePatientInClinic(patientId, clinicId));
+    }
+
+    private void requireBudgetAccess(UUID budgetId) {
+        tenantSecurity.currentClinicId().ifPresent(clinicId -> {
+            Budget budget = budgetService.findById(budgetId);
+            patientUseCase.validatePatientInClinic(budget.getPatientId(), clinicId);
+        });
+    }
 
     @GetMapping("/tariffs")
     @Operation(summary = "List tariffs")
@@ -71,24 +87,28 @@ public class BillingController {
     @GetMapping("/budgets/{id}")
     @Operation(summary = "Get budget by ID")
     public ResponseEntity<ApiResponse<Budget>> getBudget(@PathVariable UUID id) {
+        requireBudgetAccess(id);
         return ResponseEntity.ok(ApiResponse.ok(budgetService.findById(id)));
     }
 
     @PatchMapping("/budgets/{id}/approve")
     @Operation(summary = "Approve a budget")
     public ResponseEntity<ApiResponse<Budget>> approveBudget(@PathVariable UUID id) {
+        requireBudgetAccess(id);
         return ResponseEntity.ok(ApiResponse.ok(budgetService.approveBudget(id)));
     }
 
     @GetMapping("/budgets/{id}/summary")
     @Operation(summary = "Get financial summary of a budget")
     public ResponseEntity<ApiResponse<BudgetSummary>> getBudgetSummary(@PathVariable UUID id) {
+        requireBudgetAccess(id);
         return ResponseEntity.ok(ApiResponse.ok(budgetService.getBudgetSummary(id)));
     }
 
     @PostMapping("/payments")
     @Operation(summary = "Register a payment")
     public ResponseEntity<ApiResponse<Payment>> registerPayment(@Valid @RequestBody Payment payment) {
+        requirePatientAccess(payment.getPatientId());
         Payment registered = paymentService.registerPayment(payment);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(registered, "Payment registered successfully"));
     }
@@ -96,12 +116,14 @@ public class BillingController {
     @GetMapping("/payments/budget/{budgetId}")
     @Operation(summary = "List payments for a budget")
     public ResponseEntity<ApiResponse<List<Payment>>> getPaymentsByBudget(@PathVariable UUID budgetId) {
+        requireBudgetAccess(budgetId);
         return ResponseEntity.ok(ApiResponse.ok(paymentService.findByBudgetId(budgetId)));
     }
 
     @GetMapping("/payments/patient/{patientId}")
     @Operation(summary = "List payments for a patient")
     public ResponseEntity<ApiResponse<List<Payment>>> getPaymentsByPatient(@PathVariable UUID patientId) {
+        requirePatientAccess(patientId);
         return ResponseEntity.ok(ApiResponse.ok(paymentService.findByPatientId(patientId)));
     }
 
@@ -109,7 +131,16 @@ public class BillingController {
     @Operation(summary = "List budgets for a patient")
     public ResponseEntity<ApiResponse<Page<Budget>>> getBudgetsByPatient(
             @PathVariable UUID patientId, Pageable pageable) {
+        requirePatientAccess(patientId);
         return ResponseEntity.ok(ApiResponse.ok(budgetService.findByPatientId(patientId, pageable)));
+    }
+
+    @PatchMapping("/budgets/{budgetId}/items/{itemId}/performed")
+    @Operation(summary = "Mark a budget item as performed")
+    public ResponseEntity<ApiResponse<Budget>> markItemPerformed(
+            @PathVariable UUID budgetId, @PathVariable UUID itemId) {
+        requireBudgetAccess(budgetId);
+        return ResponseEntity.ok(ApiResponse.ok(budgetService.markItemAsPerformed(budgetId, itemId)));
     }
 
     @lombok.Data

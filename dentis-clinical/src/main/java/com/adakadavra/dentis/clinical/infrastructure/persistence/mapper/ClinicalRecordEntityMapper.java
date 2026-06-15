@@ -18,6 +18,7 @@ public class ClinicalRecordEntityMapper {
         ClinicalRecordEntity entity = ClinicalRecordEntity.builder()
                 .id(record.getId())
                 .patientId(record.getPatientId())
+                .dentitionType(record.getDentitionType())
                 .createdAt(record.getCreatedAt())
                 .updatedAt(record.getUpdatedAt())
                 .odontogram(new ArrayList<>())
@@ -77,6 +78,7 @@ public class ClinicalRecordEntityMapper {
         return ClinicalRecord.builder()
                 .id(entity.getId())
                 .patientId(entity.getPatientId())
+                .dentitionType(entity.getDentitionType())
                 .odontogram(odontogram)
                 .evolutions(evolutions)
                 .diagnoses(diagnoses)
@@ -93,7 +95,11 @@ public class ClinicalRecordEntityMapper {
                 .toothNumber(tooth.getToothNumber())
                 .condition(tooth.getCondition())
                 .affectedSurfaces(serializeSurfaces(tooth.getAffectedSurfaces()))
+                .surfaceConditions(serializeSurfaceConditions(tooth.getSurfaceConditions()))
+                .spaceStatus(tooth.getSpaceStatus())
                 .notes(tooth.getNotes())
+                .rootFindings(serializeRootFindings(tooth.getRootFindings()))
+                .rootNotes(tooth.getRootNotes())
                 .build();
     }
 
@@ -103,7 +109,11 @@ public class ClinicalRecordEntityMapper {
                 .toothNumber(entity.getToothNumber())
                 .condition(entity.getCondition())
                 .affectedSurfaces(deserializeSurfaces(entity.getAffectedSurfaces()))
+                .surfaceConditions(deserializeSurfaceConditions(entity.getSurfaceConditions()))
+                .spaceStatus(entity.getSpaceStatus())
                 .notes(entity.getNotes())
+                .rootFindings(deserializeRootFindings(entity.getRootFindings()))
+                .rootNotes(entity.getRootNotes())
                 .build();
     }
 
@@ -139,6 +149,7 @@ public class ClinicalRecordEntityMapper {
                 .description(diagnosis.getDescription())
                 .diagnosedAt(diagnosis.getDiagnosedAt())
                 .dentistId(diagnosis.getDentistId())
+                .toothNumber(diagnosis.getToothNumber())
                 .build();
     }
 
@@ -150,6 +161,7 @@ public class ClinicalRecordEntityMapper {
                 .description(entity.getDescription())
                 .diagnosedAt(entity.getDiagnosedAt())
                 .dentistId(entity.getDentistId())
+                .toothNumber(entity.getToothNumber())
                 .build();
     }
 
@@ -235,6 +247,40 @@ public class ClinicalRecordEntityMapper {
         Set<ToothSurface> result = new LinkedHashSet<>();
         for (String token : serialized.split(",")) {
             result.add(ToothSurface.valueOf(token.trim()));
+        }
+        return result;
+    }
+
+    private String serializeSurfaceConditions(Map<ToothSurface, ToothCondition> map) {
+        if (map == null || map.isEmpty()) return null;
+        return map.entrySet().stream()
+                .map(e -> e.getKey().name() + ":" + e.getValue().name())
+                .sorted()
+                .collect(Collectors.joining(","));
+    }
+
+    private Map<ToothSurface, ToothCondition> deserializeSurfaceConditions(String serialized) {
+        if (serialized == null || serialized.isBlank()) return Collections.emptyMap();
+        Map<ToothSurface, ToothCondition> result = new LinkedHashMap<>();
+        for (String token : serialized.split(",")) {
+            String[] parts = token.trim().split(":");
+            if (parts.length == 2) {
+                result.put(ToothSurface.valueOf(parts[0]), ToothCondition.valueOf(parts[1]));
+            }
+        }
+        return result;
+    }
+
+    private String serializeRootFindings(Set<RootFinding> findings) {
+        if (findings == null || findings.isEmpty()) return null;
+        return findings.stream().map(Enum::name).sorted().collect(Collectors.joining(","));
+    }
+
+    private Set<RootFinding> deserializeRootFindings(String serialized) {
+        if (serialized == null || serialized.isBlank()) return Collections.emptySet();
+        Set<RootFinding> result = new LinkedHashSet<>();
+        for (String token : serialized.split(",")) {
+            result.add(RootFinding.valueOf(token.trim()));
         }
         return result;
     }

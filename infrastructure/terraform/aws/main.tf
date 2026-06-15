@@ -89,3 +89,12 @@ module "ecs" {
 
   secrets_arn = module.secrets.secret_arn
 }
+
+# ─── Landing page (S3 + CloudFront) ─────────────────────────────────────────
+module "landing" {
+  source = "./modules/landing"
+
+  name_prefix     = local.name_prefix
+  domain_name     = var.landing_domain_name
+  certificate_arn = var.landing_certificate_arn
+}

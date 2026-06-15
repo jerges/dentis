@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# 3. Deploy both images to EC2 (no build). Provisions EC2 with Terraform if needed,
-#    copies compose files, launches docker-compose and verifies the deployment.
-#    Usage: ./infrastructure/scripts/deploy.sh
+# Deploy completo: provisiona EC2 con Terraform, copia ficheros, lanza docker-compose
+# y verifica el despliegue. También instala/actualiza el CloudWatch Agent.
 #
-#    Env vars (all optional):
-#      RESET_DB_VOLUME=true     Wipe and recreate the postgres volume
-#      RESET_ALL_VOLUMES=true   Wipe all compose volumes
-#      AUTO_APPLY=false         Skip terraform apply (just redeploy compose)
-#      VERIFY_DEPLOYMENT=false  Skip post-deploy health checks
+# Uso: ./infrastructure/scripts/deploy.sh
+#
+# Env vars (todas opcionales):
+#   RESET_DB_VOLUME=true     Eliminar y recrear el volumen de postgres
+#   RESET_ALL_VOLUMES=true   Eliminar todos los volúmenes de compose
+#   AUTO_APPLY=false         Saltar terraform apply (solo redeploy compose)
+#   VERIFY_DEPLOYMENT=false  Saltar health checks post-deploy
+#   ALERT_EMAIL=user@example.com  Email para alarmas CloudWatch (sobreescribe tfvars)
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -68,7 +70,7 @@ if [[ ! -f "$STACK_DIR/terraform.tfvars" ]]; then
 aws_region             = "$AWS_REGION"
 environment            = "$ENVIRONMENT"
 app_name               = "$APP_NAME"
-instance_type          = "t2.small"
+instance_type          = "t4g.small"
 root_volume_size       = 30
 
 ssh_allowed_cidr       = "$MY_IP/32"
@@ -85,7 +87,8 @@ web_ecr_repository_url = "$WEB_REPO"
 web_image_tag          = "latest"
 
 app_port               = 8080
-web_port               = 80
+web_port               = 8081
+landing_port           = 80
 
 db_name                = "dentis_db"
 db_user                = "dentis"
@@ -98,9 +101,40 @@ mail_username          = ""
 mail_password          = ""
 
 spring_profiles_active = "dev"
+alert_email            = "${ALERT_EMAIL:-}"
 TFVARS
   echo "[OK] terraform.tfvars created."
 fi
+
+# ── Patch existing tfvars if landing_port is missing ────────────────────────
+TFVARS_CHANGED=false
+TMP_TFVARS="$(mktemp)"
+cp "$STACK_DIR/terraform.tfvars" "$TMP_TFVARS"
+
+if ! grep -q "^landing_port" "$STACK_DIR/terraform.tfvars"; then
+  echo "[INFO] Migrating terraform.tfvars: splitting web_port→8081 and landing_port=80..."
+  TMP="$(mktemp)"
+  while IFS= read -r line; do
+    if [[ "$line" =~ ^web_port[[:space:]]*=[[:space:]]*80 ]]; then
+      printf 'web_port               = 8081\n'
+    else
+      printf '%s\n' "$line"
+    fi
+  done < "$STACK_DIR/terraform.tfvars" > "$TMP"
+  printf 'landing_port           = 80\n' >> "$TMP"
+  mv "$TMP" "$STACK_DIR/terraform.tfvars"
+  TFVARS_CHANGED=true
+fi
+
+if ! grep -q "^alert_email" "$STACK_DIR/terraform.tfvars"; then
+  ALERT_EMAIL_VAL="${ALERT_EMAIL:-}"
+  printf 'alert_email            = "%s"\n' "$ALERT_EMAIL_VAL" >> "$STACK_DIR/terraform.tfvars"
+  TFVARS_CHANGED=true
+fi
+
+
+[[ "$TFVARS_CHANGED" == "true" ]] && echo "[OK] terraform.tfvars migrated."
+rm -f "$TMP_TFVARS"
 
 # ── Read values from tfvars ──────────────────────────────────────────────────
 read_var() {
@@ -112,8 +146,10 @@ APP_REPO="$(read_var ecr_repository_url)"
 APP_TAG="$(read_var app_image_tag)";   [[ -n "$APP_TAG" ]]  || APP_TAG="latest"
 WEB_REPO="$(read_var web_ecr_repository_url)"
 WEB_TAG="$(read_var web_image_tag)";   [[ -n "$WEB_TAG" ]]  || WEB_TAG="latest"
-APP_PORT="$(read_var app_port)";       [[ -n "$APP_PORT" ]] || APP_PORT="8080"
-WEB_PORT="$(read_var web_port)";       [[ -n "$WEB_PORT" ]] || WEB_PORT="80"
+APP_PORT="$(read_var app_port)";           [[ -n "$APP_PORT" ]]     || APP_PORT="8080"
+WEB_PORT="$(read_var web_port)";           [[ -n "$WEB_PORT" ]]     || WEB_PORT="8081"
+LANDING_PORT="$(read_var landing_port)";   [[ -n "$LANDING_PORT" ]] || LANDING_PORT="80"
+ATTACHMENTS_BUCKET="$(terraform -chdir="$STACK_DIR" output -raw attachments_bucket_name 2>/dev/null || echo '')"
 
 [[ -n "$APP_REPO" && -n "$WEB_REPO" ]] || {
   echo "[ERROR] ECR repository URLs missing in terraform.tfvars" >&2; exit 1
@@ -147,10 +183,12 @@ echo "[INFO] EC2 IP: $INSTANCE_IP  |  SSH key: $SSH_KEY"
 
 # ── Generate .env for compose ────────────────────────────────────────────────
 cat > "$ROOT_DIR/.env.ec2" <<ENV
+AWS_REGION=${AWS_REGION}
 WEB_IMAGE=${WEB_REPO}:${WEB_TAG}
 APP_IMAGE=${APP_REPO}:${APP_TAG}
 WEB_HOST_PORT=${WEB_PORT}
 APP_HOST_PORT=${APP_PORT}
+LANDING_HOST_PORT=${LANDING_PORT}
 DB_NAME=${DB_NAME:-dentis_db}
 DB_USER=${DB_USER:-dentis}
 DB_PASSWORD=${DB_PASSWORD:-dentis}
@@ -161,6 +199,11 @@ MAIL_USERNAME=${MAIL_USERNAME:-}
 MAIL_PASSWORD=${MAIL_PASSWORD:-}
 MAIL_SMTP_HOST_PORT=${MAIL_PORT:-1025}
 MAIL_UI_HOST_PORT=8025
+S3_ATTACHMENTS_BUCKET=${ATTACHMENTS_BUCKET}
+GRAFANA_USER=${GRAFANA_USER:-admin}
+GRAFANA_PASSWORD=${GRAFANA_PASSWORD:-dentis2026}
+PROMETHEUS_PORT=${PROMETHEUS_PORT:-9090}
+GRAFANA_PORT=${GRAFANA_PORT:-3000}
 ENV
 
 # ── Wait for SSH ─────────────────────────────────────────────────────────────
@@ -186,6 +229,42 @@ ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no \
   exit 1
 }
 
+# ── Install / update CloudWatch Agent on EC2 ────────────────────────────────
+echo "[INFO] Configuring CloudWatch Agent..."
+ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no ec2-user@"$INSTANCE_IP" bash <<'CWSSH'
+set -euo pipefail
+
+# Install agent if missing
+if ! command -v /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl &>/dev/null; then
+  echo "  Installing amazon-cloudwatch-agent..."
+  sudo dnf install -y amazon-cloudwatch-agent 2>/dev/null || \
+  sudo yum install -y amazon-cloudwatch-agent
+fi
+
+# Write config
+sudo mkdir -p /opt/aws/amazon-cloudwatch-agent/etc
+sudo tee /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json >/dev/null <<'CWCONFIG'
+{
+  "agent": { "metrics_collection_interval": 60 },
+  "metrics": {
+    "namespace": "DentisDevEC2",
+    "append_dimensions": { "InstanceId": "${aws:InstanceId}" },
+    "metrics_collected": {
+      "mem":  { "measurement": ["mem_used_percent"],  "metrics_collection_interval": 60 },
+      "disk": { "measurement": ["disk_used_percent"], "resources": ["/"],
+                "metrics_collection_interval": 60, "drop_device": true }
+    }
+  }
+}
+CWCONFIG
+
+# (Re)start agent with new config
+sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+  -a fetch-config -m ec2 -s \
+  -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json >/dev/null
+echo "  CloudWatch Agent running."
+CWSSH
+
 # ── Copy files to EC2 ────────────────────────────────────────────────────────
 echo "[INFO] Copying files to EC2..."
 scp -i "$SSH_KEY" -o StrictHostKeyChecking=no \
@@ -194,6 +273,10 @@ scp -i "$SSH_KEY" -o StrictHostKeyChecking=no \
   "$ROOT_DIR/.env.ec2" ec2-user@"$INSTANCE_IP":/tmp/.env >/dev/null
 scp -r -i "$SSH_KEY" -o StrictHostKeyChecking=no \
   "$ROOT_DIR/dentis-api/src/main/resources" ec2-user@"$INSTANCE_IP":/tmp/dentis-api-resources >/dev/null
+scp -r -i "$SSH_KEY" -o StrictHostKeyChecking=no \
+  "$ROOT_DIR/landing" ec2-user@"$INSTANCE_IP":/tmp/dentis-landing >/dev/null
+scp -r -i "$SSH_KEY" -o StrictHostKeyChecking=no \
+  "$ROOT_DIR/infrastructure/monitoring" ec2-user@"$INSTANCE_IP":/tmp/dentis-monitoring >/dev/null
 
 # ── Deploy on EC2 ────────────────────────────────────────────────────────────
 echo "[INFO] Deploying on EC2..."
@@ -213,6 +296,11 @@ sudo mv /tmp/.env              /opt/dentis/.env
 sudo rm -rf /opt/dentis/dentis-api
 sudo mkdir -p /opt/dentis/dentis-api/src/main
 sudo mv /tmp/dentis-api-resources /opt/dentis/dentis-api/src/main/resources
+sudo rm -rf /opt/dentis/landing
+sudo mv /tmp/dentis-landing /opt/dentis/landing
+sudo rm -rf /opt/dentis/infrastructure/monitoring
+sudo mkdir -p /opt/dentis/infrastructure
+sudo mv /tmp/dentis-monitoring /opt/dentis/infrastructure/monitoring
 sudo chown -R ec2-user:ec2-user /opt/dentis
 cd /opt/dentis
 
@@ -231,11 +319,23 @@ echo "[INFO] Compose started."
 ENDSSH
 
 # ── Summary ──────────────────────────────────────────────────────────────────
+CW_LOGS_URL="https://console.aws.amazon.com/cloudwatch/home?region=${AWS_REGION}#logsV2:log-groups\$3FlogGroupNameFilter\$3D%2Fdentis%2Fdev"
+CW_ALARMS_URL="https://console.aws.amazon.com/cloudwatch/home?region=${AWS_REGION}#alarmsV2:"
+
 echo ""
-echo "  Frontend: http://$INSTANCE_IP"
-echo "  Backend:  http://$INSTANCE_IP:$APP_PORT"
-echo "  MailHog:  http://$INSTANCE_IP:8025"
-echo "  SSH:      ssh -i $SSH_KEY ec2-user@$INSTANCE_IP"
+PROMETHEUS_PORT="${PROMETHEUS_PORT:-9090}"
+GRAFANA_PORT="${GRAFANA_PORT:-3000}"
+
+echo "  Landing:    http://$INSTANCE_IP:$LANDING_PORT"
+echo "  Frontend:   http://$INSTANCE_IP:$WEB_PORT"
+echo "  Backend:    http://$INSTANCE_IP:$APP_PORT"
+echo "  MailHog:    http://$INSTANCE_IP:8025"
+echo "  Prometheus: http://$INSTANCE_IP:$PROMETHEUS_PORT"
+echo "  Grafana:    http://$INSTANCE_IP:$GRAFANA_PORT  (admin / dentis2026)"
+echo "  SSH:        ssh -i $SSH_KEY ec2-user@$INSTANCE_IP"
+echo ""
+echo "  CloudWatch Logs:   $CW_LOGS_URL"
+echo "  CloudWatch Alarms: $CW_ALARMS_URL"
 
 # ── Post-deploy verification ─────────────────────────────────────────────────
 if [[ "$VERIFY_DEPLOYMENT" != "true" ]]; then
@@ -338,9 +438,12 @@ fi
 
 echo ""
 echo "── Health checks ─────────────────────────"
-check "Backend  /actuator/health" "http://$INSTANCE_IP:$APP_PORT/actuator/health" "app"
-check "Frontend /"                "http://$INSTANCE_IP:$WEB_PORT/"                "web"
-check "MailHog  /"                "http://$INSTANCE_IP:8025/"                     "mailhog"
+check "Landing    /"                "http://$INSTANCE_IP:$LANDING_PORT/"                    "landing"
+check "Backend    /actuator/health" "http://$INSTANCE_IP:$APP_PORT/actuator/health"        "app"
+check "Frontend   /"                "http://$INSTANCE_IP:$WEB_PORT/"                        "web"
+check "MailHog    /"                "http://$INSTANCE_IP:8025/"                             "mailhog"
+check "Prometheus /-/healthy"       "http://$INSTANCE_IP:$PROMETHEUS_PORT/-/healthy"        "prometheus"
+check "Grafana    /api/health"      "http://$INSTANCE_IP:$GRAFANA_PORT/api/health"          "grafana"
 
 echo ""
 echo "──────────────────────────────────────────"

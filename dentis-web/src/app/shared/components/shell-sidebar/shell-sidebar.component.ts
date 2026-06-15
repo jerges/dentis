@@ -35,15 +35,28 @@ import { AuthService } from '../../../core/services/auth.service';
 
     <mat-nav-list class="menu-list">
       @for (item of items(); track item.route) {
-        <a mat-list-item
-           class="menu-link"
-           [routerLink]="item.route"
-           routerLinkActive="active-link"
-           (click)="onItemSelected()"
-           [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }">
-          <mat-icon matListItemIcon class="menu-icon">{{ item.icon }}</mat-icon>
-          <span matListItemTitle class="menu-label">{{ item.label }}</span>
-        </a>
+        @if (item.externalUrl) {
+          <a mat-list-item
+             class="menu-link"
+             [href]="item.externalUrl"
+             target="_blank"
+             rel="noopener noreferrer"
+             (click)="onItemSelected()">
+            <mat-icon matListItemIcon class="menu-icon">{{ item.icon }}</mat-icon>
+            <span matListItemTitle class="menu-label">{{ item.label }}</span>
+            <mat-icon class="external-icon">open_in_new</mat-icon>
+          </a>
+        } @else {
+          <a mat-list-item
+             class="menu-link"
+             [routerLink]="item.route"
+             routerLinkActive="active-link"
+             (click)="onItemSelected()"
+             [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }">
+            <mat-icon matListItemIcon class="menu-icon">{{ item.icon }}</mat-icon>
+            <span matListItemTitle class="menu-label">{{ item.label }}</span>
+          </a>
+        }
       }
     </mat-nav-list>
 
@@ -82,8 +95,8 @@ import { AuthService } from '../../../core/services/auth.service';
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
-      box-shadow: 0 12px 20px rgba(79, 70, 229, 0.25);
+      background: linear-gradient(135deg, #0d9488 0%, #0ea5e9 100%);
+      box-shadow: 0 12px 20px rgba(13, 148, 136, 0.30);
     }
     .logo-icon { font-size: 26px; width: 26px; height: 26px; color: white; }
     .brand-copy { display: flex; flex-direction: column; }
@@ -153,6 +166,10 @@ import { AuthService } from '../../../core/services/auth.service';
     .logout-btn:hover {
       background: rgba(248, 113, 113, 0.08);
       color: #fecaca;
+    }
+    .external-icon {
+      font-size: 14px; width: 14px; height: 14px;
+      margin-left: auto; opacity: .45;
     }
     .menu-link.active-link {
       background: linear-gradient(90deg, var(--dentis-sidenav-active) 0%, var(--dentis-sidenav-active-strong) 100%) !important;

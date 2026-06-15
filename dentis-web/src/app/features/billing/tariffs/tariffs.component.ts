@@ -124,17 +124,15 @@ import { CreateTariffRequest, Tariff, TariffCategory } from '../../../core/model
   `,
   styles: [`
     .page-header { margin-bottom: 24px; }
-    .page-title { margin: 0 0 4px; font-size: 24px; font-weight: 700; color: #1a237e; }
-    .page-subtitle { margin: 0; color: #666; font-size: 13px; }
     .form-card { margin-bottom: 16px; }
     .form-grid { display:grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap: 12px; }
     .full-span { grid-column: 1 / -1; }
     .actions { display:flex; justify-content:flex-end; gap: 10px; }
     .w-full { width: 100%; }
-    .tariff-name { font-weight: 500; }
-    .tariff-desc { font-size: 12px; color: #888; }
-    .price { font-weight: 600; color: #2e7d32; }
-    .table-row:hover { background: #f5f5f5; }
+    .tariff-name { font-weight: 600; }
+    .tariff-desc { font-size: 12px; color: var(--dentis-text-muted); }
+    .price { font-weight: 700; color: var(--dentis-success); }
+    .table-row:hover { background: rgba(13, 148, 136, 0.04); }
   `]
 })
 export class TariffsComponent implements OnInit {

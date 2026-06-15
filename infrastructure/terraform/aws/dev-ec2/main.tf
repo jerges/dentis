@@ -46,7 +46,7 @@ data "aws_ami" "amazon_linux_2023" {
 
   filter {
     name   = "architecture"
-    values = ["x86_64"]
+    values = ["arm64"]
   }
 
   filter {
@@ -125,12 +125,16 @@ resource "aws_security_group" "ec2" {
     description = "SSH (optional when using Session Manager)"
   }
 
-  ingress {
-    from_port   = var.web_port
-    to_port     = var.web_port
-    protocol    = "tcp"
-    cidr_blocks = [var.web_allowed_cidr]
-    description = "Frontend HTTP"
+  # toset() deduplicates if landing_port == web_port (avoids duplicate rule error)
+  dynamic "ingress" {
+    for_each = toset([tostring(var.landing_port), tostring(var.web_port)])
+    content {
+      from_port   = tonumber(ingress.value)
+      to_port     = tonumber(ingress.value)
+      protocol    = "tcp"
+      cidr_blocks = [var.web_allowed_cidr]
+      description = "HTTP port ${ingress.value}"
+    }
   }
 
   ingress {
@@ -138,7 +142,7 @@ resource "aws_security_group" "ec2" {
     to_port     = var.app_port
     protocol    = "tcp"
     cidr_blocks = [var.app_allowed_cidr]
-    description = "Backend"
+    description = "Backend API"
   }
 
   ingress {
@@ -147,6 +151,22 @@ resource "aws_security_group" "ec2" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
     description = "MailHog"
+  }
+
+  ingress {
+    from_port   = var.prometheus_port
+    to_port     = var.prometheus_port
+    protocol    = "tcp"
+    cidr_blocks = [var.monitoring_allowed_cidr]
+    description = "Prometheus"
+  }
+
+  ingress {
+    from_port   = var.grafana_port
+    to_port     = var.grafana_port
+    protocol    = "tcp"
+    cidr_blocks = [var.monitoring_allowed_cidr]
+    description = "Grafana"
   }
 
   egress {
@@ -194,6 +214,17 @@ resource "aws_iam_role_policy_attachment" "ssm" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
+# CloudWatch Agent (métricas de memoria/disco) + Logs (awslogs docker driver)
+resource "aws_iam_role_policy_attachment" "cloudwatch_agent" {
+  role       = aws_iam_role.ec2.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
+
+resource "aws_iam_role_policy_attachment" "cloudwatch_logs" {
+  role       = aws_iam_role.ec2.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
+}
+
 resource "aws_iam_instance_profile" "ec2" {
   name = "${var.app_name}-profile"
   role = aws_iam_role.ec2.name
@@ -215,24 +246,43 @@ resource "aws_instance" "dev" {
     delete_on_termination = true
   }
 
-  # Install Docker and ensure SSM Agent is running
   user_data = base64encode(<<-EOF
     #!/bin/bash
     set -euo pipefail
     yum update -y
-    yum install -y docker git amazon-ssm-agent
+    yum install -y docker git amazon-ssm-agent amazon-cloudwatch-agent
     systemctl enable --now docker
     systemctl enable --now amazon-ssm-agent
     usermod -a -G docker ec2-user
     mkdir -p /opt/dentis
     chown ec2-user:ec2-user /opt/dentis
 
-    # Install docker compose v2 plugin (not available in AL2023 default repos)
+    # Docker Compose v2 plugin
     mkdir -p /usr/local/lib/docker/cli-plugins
     curl -SL \
       "https://github.com/docker/compose/releases/download/v2.27.1/docker-compose-linux-x86_64" \
       -o /usr/local/lib/docker/cli-plugins/docker-compose
     chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
+    # CloudWatch Agent config
+    mkdir -p /opt/aws/amazon-cloudwatch-agent/etc
+    cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<'CWCONFIG'
+    {
+      "agent": { "metrics_collection_interval": 60 },
+      "metrics": {
+        "namespace": "DentisDevEC2",
+        "append_dimensions": { "InstanceId": "$${aws:InstanceId}" },
+        "metrics_collected": {
+          "mem":  { "measurement": ["mem_used_percent"],  "metrics_collection_interval": 60 },
+          "disk": { "measurement": ["disk_used_percent"], "resources": ["/"],
+                    "metrics_collection_interval": 60, "drop_device": true }
+        }
+      }
+    }
+    CWCONFIG
+    /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+      -a fetch-config -m ec2 -s \
+      -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
   EOF
   )
 
@@ -241,7 +291,116 @@ resource "aws_instance" "dev" {
   }
 }
 
-# Elastic IP (optional)
+# ── S3 bucket for clinical attachments (images / X-rays) ─────────────────────
+locals {
+  attachments_bucket = var.attachments_bucket_name != "" ? var.attachments_bucket_name : "${var.app_name}-${var.environment}-attachments-${data.aws_caller_identity.current.account_id}"
+}
+
+data "aws_caller_identity" "current" {}
+
+resource "aws_s3_bucket" "attachments" {
+  bucket        = local.attachments_bucket
+  force_destroy = true
+
+  tags = {
+    Name = "${var.app_name}-attachments"
+  }
+}
+
+resource "aws_s3_bucket_versioning" "attachments" {
+  bucket = aws_s3_bucket.attachments.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "attachments" {
+  bucket = aws_s3_bucket.attachments.id
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "attachments" {
+  bucket                  = aws_s3_bucket.attachments.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "attachments" {
+  bucket = aws_s3_bucket.attachments.id
+  rule {
+    id     = "expire-incomplete-uploads"
+    status = "Enabled"
+    abort_incomplete_multipart_upload { days_after_initiation = 7 }
+    filter {}
+  }
+}
+
+resource "aws_iam_policy" "s3_attachments" {
+  name        = "${var.app_name}-${var.environment}-s3-attachments"
+  description = "Allow EC2 app to read/write clinical attachments bucket"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject", "s3:HeadObject"]
+        Resource = "${aws_s3_bucket.attachments.arn}/*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["s3:ListBucket"]
+        Resource = aws_s3_bucket.attachments.arn
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "s3_attachments" {
+  role       = aws_iam_role.ec2.name
+  policy_arn = aws_iam_policy.s3_attachments.arn
+}
+
+# ── Bedrock: invoke models (Nova Pro, Titan Embeddings, Claude) ───────────────
+resource "aws_iam_policy" "bedrock_invoke" {
+  name        = "${var.app_name}-${var.environment}-bedrock-invoke"
+  description = "Allow EC2 app to invoke Bedrock models and use Converse API"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "bedrock:InvokeModel",
+          "bedrock:InvokeModelWithResponseStream"
+        ]
+        Resource = "arn:aws:bedrock:${var.aws_region}::foundation-model/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "bedrock:Converse",
+          "bedrock:ConverseStream"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "bedrock_invoke" {
+  role       = aws_iam_role.ec2.name
+  policy_arn = aws_iam_policy.bedrock_invoke.arn
+}
+
+# Elastic IP — IP fija aunque la instancia se apague/enciende
 resource "aws_eip" "dev" {
   count    = var.assign_eip ? 1 : 0
   instance = aws_instance.dev.id
@@ -251,4 +410,5 @@ resource "aws_eip" "dev" {
     Name = "${var.app_name}-eip"
   }
 }
+
 

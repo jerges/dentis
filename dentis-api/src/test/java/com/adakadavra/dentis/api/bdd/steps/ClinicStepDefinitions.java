@@ -1,5 +1,6 @@
 package com.adakadavra.dentis.api.bdd.steps;
 
+import com.adakadavra.dentis.api.bdd.support.TenantAuthSupport;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.cucumber.java.Before;
@@ -36,6 +37,7 @@ public class ClinicStepDefinitions {
     private JdbcTemplate jdbcTemplate;
 
     private UUID clinicId;
+    private UUID secondClinicId;
     private UUID clinicUserId;
     private String currentRole;
     private int lastStatus;
@@ -46,6 +48,7 @@ public class ClinicStepDefinitions {
         jdbcTemplate.execute("DELETE FROM users");
         jdbcTemplate.execute("DELETE FROM clinics");
         clinicId = null;
+        secondClinicId = null;
         clinicUserId = null;
         currentRole = "SUPER_ADMIN";
         lastStatus = 0;
@@ -138,6 +141,28 @@ public class ClinicStepDefinitions {
     public void clinicApiDeactivatesUserAsRole(String role) throws Exception {
         this.currentRole = role;
         execute(delete("/api/v1/clinics/{clinicId}/users/{userId}", clinicId, clinicUserId));
+    }
+
+    @Given("clinic api has two clinics with an admin for the first")
+    public void clinicApiHasTwoClinicsWithAdmin() throws Exception {
+        this.currentRole = "SUPER_ADMIN";
+        executePost("/api/v1/clinics", validClinicPayload("First Clinic"));
+        assertThat(lastStatus).isEqualTo(201);
+        clinicId = UUID.fromString(parseData().path("id").asText());
+
+        executePost("/api/v1/clinics", validClinicPayload("Second Clinic"));
+        assertThat(lastStatus).isEqualTo(201);
+        secondClinicId = UUID.fromString(parseData().path("id").asText());
+    }
+
+    @When("that admin tries to list users of the second clinic")
+    public void thatAdminTriesToListUsersOfSecondClinic() throws Exception {
+        MvcResult result = mockMvc.perform(
+                get("/api/v1/clinics/{clinicId}/users", secondClinicId)
+                        .with(TenantAuthSupport.asClinicAdmin(clinicId)))
+                .andReturn();
+        lastStatus = result.getResponse().getStatus();
+        lastBody = result.getResponse().getContentAsString();
     }
 
     @Then("clinic response status should be {int}")

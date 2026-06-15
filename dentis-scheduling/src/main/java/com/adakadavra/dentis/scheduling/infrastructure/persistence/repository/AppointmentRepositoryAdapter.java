@@ -48,6 +48,12 @@ public class AppointmentRepositoryAdapter implements AppointmentRepository {
     }
 
     @Override
+    public List<Appointment> findScheduledBetween(LocalDateTime from, LocalDateTime to) {
+        return jpaRepository.findScheduledBetween(from, to)
+                .stream().map(entityMapper::toDomain).toList();
+    }
+
+    @Override
     public boolean hasConflict(UUID dentistId, LocalDateTime start, LocalDateTime end, UUID excludeAppointmentId) {
         return jpaRepository.hasConflict(dentistId, start, end, excludeAppointmentId);
     }

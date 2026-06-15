@@ -17,10 +17,10 @@ import { BillingService } from '../../../core/services/billing.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ClinicService } from '../../../core/services/clinic.service';
 import { PatientService } from '../../../core/services/patient.service';
-import { Budget, CreateBudgetRequest, Tariff } from '../../../core/models/billing.model';
+import { Budget, BudgetItem, CreateBudgetRequest, Tariff } from '../../../core/models/billing.model';
 import { Clinic, ClinicUser } from '../../../core/models/clinic.model';
 import { Patient } from '../../../core/models/patient.model';
-import { EntityAutocompleteComponent } from '../../../shared/components/entity-autocomplete/entity-autocomplete.component';
+import { AutocompleteOption, EntityAutocompleteComponent } from '../../../shared/components/entity-autocomplete/entity-autocomplete.component';
 
 @Component({
   selector: 'app-budgets',
@@ -152,6 +152,10 @@ import { EntityAutocompleteComponent } from '../../../shared/components/entity-a
                 <button mat-icon-button matTooltip="Ver resumen" (click)="viewSummary(b.id)">
                   <mat-icon>summarize</mat-icon>
                 </button>
+                <button mat-icon-button matTooltip="Ver procedimientos" color="accent"
+                        (click)="toggleItems(b)">
+                  <mat-icon>{{ selectedBudget?.id === b.id ? 'expand_less' : 'list_alt' }}</mat-icon>
+                </button>
               </td>
             </ng-container>
             <tr mat-header-row *matHeaderRowDef="cols"></tr>
@@ -164,19 +168,78 @@ import { EntityAutocompleteComponent } from '../../../shared/components/entity-a
           </table>
         </mat-card-content>
       </mat-card>
+
+      @if (selectedBudget) {
+        <mat-card class="items-card">
+          <mat-card-header>
+            <mat-card-title>Procedimientos del presupuesto</mat-card-title>
+            <span class="spacer"></span>
+            <button mat-icon-button (click)="selectedBudget = null"><mat-icon>close</mat-icon></button>
+          </mat-card-header>
+          <mat-card-content>
+            @if (!selectedBudget.items?.length) {
+              <p style="color:#999;padding:16px 0;text-align:center">Sin procedimientos</p>
+            } @else {
+              <table mat-table [dataSource]="selectedBudget.items" class="w-full items-table">
+                <ng-container matColumnDef="description">
+                  <th mat-header-cell *matHeaderCellDef>Procedimiento</th>
+                  <td mat-cell *matCellDef="let item">{{ item.description || item.tariffId }}</td>
+                </ng-container>
+                <ng-container matColumnDef="qty">
+                  <th mat-header-cell *matHeaderCellDef>Cant.</th>
+                  <td mat-cell *matCellDef="let item">{{ item.quantity }}</td>
+                </ng-container>
+                <ng-container matColumnDef="price">
+                  <th mat-header-cell *matHeaderCellDef>Neto</th>
+                  <td mat-cell *matCellDef="let item" class="amount">
+                    {{ itemNet(item) | currency:'USD' }}
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="paymentStatus">
+                  <th mat-header-cell *matHeaderCellDef>Pago</th>
+                  <td mat-cell *matCellDef="let item">
+                    <span class="status-chip" [class]="'status-' + (item.paymentStatus ?? 'pending').toLowerCase()">
+                      {{ item.paymentStatus ?? 'PENDING' }}
+                    </span>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="performed">
+                  <th mat-header-cell *matHeaderCellDef>Realizado</th>
+                  <td mat-cell *matCellDef="let item">
+                    @if (item.performed) {
+                      <span class="performed-badge">
+                        <mat-icon color="primary">check_circle</mat-icon>
+                        {{ item.performedAt ? (item.performedAt | date:'dd/MM/yyyy') : '' }}
+                      </span>
+                    } @else {
+                      <button mat-stroked-button color="primary" [disabled]="marking"
+                              (click)="markItemPerformed(selectedBudget!.id, item.id)">
+                        <mat-icon>check</mat-icon> Marcar realizado
+                      </button>
+                    }
+                  </td>
+                </ng-container>
+                <tr mat-header-row *matHeaderRowDef="itemCols"></tr>
+                <tr mat-row *matRowDef="let r; columns: itemCols;"></tr>
+              </table>
+            }
+          </mat-card-content>
+        </mat-card>
+      }
     </div>
   `,
   styles: [`
     .page-header { margin-bottom: 24px; }
-    .page-title { margin: 0 0 4px; font-size: 24px; font-weight: 700; color: #1a237e; }
-    .page-subtitle { margin: 0; color: #666; font-size: 13px; }
     .form-card { margin-bottom: 16px; }
     .form-grid { display:grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap: 12px; }
     .full-span { grid-column: 1 / -1; }
     .actions { display:flex; justify-content:flex-end; gap: 10px; }
     .w-full { width: 100%; }
-    .amount { font-weight: 600; color: #2e7d32; }
-    .table-row:hover { background: #f5f5f5; cursor: pointer; }
+    .amount { font-weight: 700; color: var(--dentis-success); }
+    .table-row:hover { background: rgba(13, 148, 136, 0.04); cursor: pointer; }
+    .items-card { margin-top: 16px; }
+    .items-table { width: 100%; }
+    .performed-badge { display:flex; align-items:center; gap:4px; font-size:13px; color: var(--dentis-success); }
     @media (max-width: 900px) {
       .form-grid { grid-template-columns: 1fr; }
       .actions { justify-content: stretch; }
@@ -185,9 +248,12 @@ import { EntityAutocompleteComponent } from '../../../shared/components/entity-a
 })
 export class BudgetsComponent implements OnInit {
   cols = ['patient', 'dentist', 'total', 'status', 'date', 'actions'];
+  itemCols = ['description', 'qty', 'price', 'paymentStatus', 'performed'];
   dataSource = new MatTableDataSource<Budget>([]);
   showForm = false;
   loading = false;
+  marking = false;
+  selectedBudget: Budget | null = null;
   dentists: ClinicUser[] = [];
   tariffs: Tariff[] = [];
 
@@ -297,32 +363,43 @@ export class BudgetsComponent implements OnInit {
     });
   }
 
-  onPatientSelected(patient: Patient): void {
+  onPatientSelected(value: AutocompleteOption): void {
+    const patient = value as Patient;
     this.form.controls.patientId.setValue(patient.id);
     this.loadBudgetsByPatient(patient.id);
   }
 
-  onDentistSelected(dentist: ClinicUser): void {
-    this.form.controls.dentistId.setValue(dentist.id);
+  onDentistSelected(value: AutocompleteOption): void {
+    this.form.controls.dentistId.setValue((value as ClinicUser).id);
   }
 
-  onTariffSelected(tariff: Tariff): void {
+  onTariffSelected(value: AutocompleteOption): void {
+    const tariff = value as Tariff;
     this.form.controls.tariffId.setValue(tariff.id);
     this.form.controls.unitPrice.setValue(tariff.basePrice);
   }
 
-  displayPatient = (patient: Patient | string | null): string =>
-    !patient || typeof patient === 'string' ? patient ?? '' : `${patient.firstName} ${patient.lastName} · ${patient.idDocument}`;
+  displayPatient = (value: AutocompleteOption | null): string => {
+    if (!value || typeof value === 'string') return value ?? '';
+    const p = value as Patient;
+    return `${p.firstName} ${p.lastName} · ${p.idDocument}`;
+  };
 
-  displayDentist = (dentist: ClinicUser | string | null): string =>
-    !dentist || typeof dentist === 'string' ? dentist ?? '' : `${dentist.fullName} · ${dentist.username}`;
+  displayDentist = (value: AutocompleteOption | null): string => {
+    if (!value || typeof value === 'string') return value ?? '';
+    const d = value as ClinicUser;
+    return `${d.fullName} · ${d.username}`;
+  };
 
-  displayTariff = (tariff: Tariff | string | null): string =>
-    !tariff || typeof tariff === 'string' ? tariff ?? '' : `${tariff.code} · ${tariff.name} · ${tariff.basePrice.toFixed(2)} USD`;
+  displayTariff = (value: AutocompleteOption | null): string => {
+    if (!value || typeof value === 'string') return value ?? '';
+    const t = value as Tariff;
+    return `${t.code} · ${t.name} · ${t.basePrice.toFixed(2)} USD`;
+  };
 
-  trackPatient = (patient: Patient): string => patient.id;
-  trackDentist = (dentist: ClinicUser): string => dentist.id;
-  trackTariff = (tariff: Tariff): string => tariff.id;
+  trackPatient = (value: AutocompleteOption): string => (value as Patient).id;
+  trackDentist = (value: AutocompleteOption): string => (value as ClinicUser).id;
+  trackTariff = (value: AutocompleteOption): string => (value as Tariff).id;
 
   searchTerm(value: string | Patient | ClinicUser | Tariff | null): string {
     if (typeof value === 'string') {
@@ -355,6 +432,38 @@ export class BudgetsComponent implements OnInit {
     this.billingService.getBudgetSummary(id).subscribe((s) =>
       this.snack.open(`Total: ${s.grandTotal} | Pagado: ${s.totalPaid} | Saldo: ${s.balance}`, 'OK', { duration: 5000 })
     );
+  }
+
+  toggleItems(budget: Budget): void {
+    this.selectedBudget = this.selectedBudget?.id === budget.id ? null : budget;
+  }
+
+  markItemPerformed(budgetId: string, itemId: string): void {
+    if (!itemId) return;
+    this.marking = true;
+    this.billingService.markItemPerformed(budgetId, itemId).subscribe({
+      next: (updated) => {
+        this.marking = false;
+        this.selectedBudget = updated;
+        const idx = this.dataSource.data.findIndex((b) => b.id === budgetId);
+        if (idx >= 0) {
+          const data = [...this.dataSource.data];
+          data[idx] = updated;
+          this.dataSource.data = data;
+        }
+        this.snack.open('Procedimiento marcado como realizado', 'OK', { duration: 3000 });
+      },
+      error: () => {
+        this.marking = false;
+        this.snack.open('Error al actualizar el procedimiento', 'OK', { duration: 3000 });
+      }
+    });
+  }
+
+  itemNet(item: BudgetItem): number {
+    const base = Number(item.unitPrice ?? 0) * Number(item.quantity ?? 1);
+    const discount = Number(item.discountPercentage ?? 0);
+    return base - base * (discount / 100);
   }
 
   calculateBudgetTotal(budget: Budget): number {

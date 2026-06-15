@@ -125,8 +125,8 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
     .pager { margin-top: 16px; display:flex; align-items:center; gap:12px; justify-content:flex-end; }
     .actions-cell { display:flex; align-items:center; gap: 8px; flex-wrap: wrap; }
     .health-status { border: 1px solid var(--dentis-border); }
-    .health-ok { color: #2e7d32; }
-    .health-down { color: #c62828; }
+    .health-ok { color: var(--dentis-success); }
+    .health-down { color: var(--dentis-warn); }
   `]
 })
 export class ClinicsListComponent implements OnInit {

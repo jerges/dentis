@@ -1,6 +1,8 @@
 package com.adakadavra.dentis.billing.domain.service;
 
+import com.adakadavra.dentis.billing.domain.event.BudgetPresentedEvent;
 import com.adakadavra.dentis.billing.domain.model.Budget;
+import com.adakadavra.dentis.billing.domain.model.BudgetItem;
 import com.adakadavra.dentis.billing.domain.model.BudgetStatus;
 import com.adakadavra.dentis.billing.domain.model.BudgetSummary;
 import com.adakadavra.dentis.billing.domain.model.PaymentSummaryStatus;
@@ -10,6 +12,7 @@ import com.adakadavra.dentis.billing.domain.repository.TariffRepository;
 import com.adakadavra.dentis.common.exception.BusinessRuleException;
 import com.adakadavra.dentis.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -17,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -27,12 +31,15 @@ public class BudgetService {
     private final BudgetRepository budgetRepository;
     private final PaymentRepository paymentRepository;
     private final TariffRepository tariffRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public Budget createBudget(Budget budget) {
         validateBudgetItems(budget);
         Budget draft = budget.withStatus(BudgetStatus.DRAFT).withCreatedAt(LocalDateTime.now());
-        return budgetRepository.save(draft);
+        Budget saved = budgetRepository.save(draft);
+        eventPublisher.publishEvent(new BudgetPresentedEvent(this, saved));
+        return saved;
     }
 
     @Transactional
@@ -65,6 +72,21 @@ public class BudgetService {
 
     public Budget findById(UUID id) {
         return findBudgetOrThrow(id);
+    }
+
+    @Transactional
+    public Budget markItemAsPerformed(UUID budgetId, UUID itemId) {
+        Budget budget = findBudgetOrThrow(budgetId);
+        boolean found = budget.getItems().stream().anyMatch(i -> itemId.equals(i.getId()));
+        if (!found) {
+            throw new ResourceNotFoundException("BudgetItem", itemId);
+        }
+        List<BudgetItem> updatedItems = budget.getItems().stream()
+                .map(item -> itemId.equals(item.getId())
+                        ? item.withPerformed(true).withPerformedAt(LocalDateTime.now())
+                        : item)
+                .toList();
+        return budgetRepository.save(budget.withItems(updatedItems));
     }
 
     public Page<Budget> findByPatientId(UUID patientId, Pageable pageable) {

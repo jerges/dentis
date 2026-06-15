@@ -1,58 +1,70 @@
 @use '@angular/material' as mat;
 
 :root {
-  --dentis-primary: #4f46e5;
-  --dentis-primary-dark: #312e81;
-  --dentis-accent: #06b6d4;
+  /* Confianza Clínica — teal/sky */
+  --dentis-primary: #0d9488;
+  --dentis-primary-dark: #0f766e;
+  --dentis-accent: #0ea5e9;
   --dentis-success: #16a34a;
   --dentis-warn: #dc2626;
   --dentis-text: #0f172a;
   --dentis-text-muted: #64748b;
   --dentis-border: #e2e8f0;
   --dentis-surface: #ffffff;
-  --dentis-surface-alt: #f8fafc;
-  --dentis-sidenav: #0f172a;
-  --dentis-sidenav-surface: linear-gradient(180deg, #0b1220 0%, #111827 55%, #172033 100%);
-  --dentis-sidenav-text: #f8fbff;
-  --dentis-sidenav-text-muted: #c4d2e3;
-  --dentis-sidenav-icon: #d9e6f5;
-  --dentis-sidenav-border: rgba(148, 163, 184, 0.18);
+  --dentis-surface-alt: #f1f8f8;
+  --dentis-sidenav: #082a2c;
+  --dentis-sidenav-surface: linear-gradient(180deg, #082a2c 0%, #0b3a3d 55%, #0f2a33 100%);
+  --dentis-sidenav-text: #f1fbfb;
+  --dentis-sidenav-text-muted: #b8d4d4;
+  --dentis-sidenav-icon: #cdeaea;
+  --dentis-sidenav-border: rgba(148, 200, 200, 0.18);
   --dentis-sidenav-hover: rgba(255, 255, 255, 0.1);
-  --dentis-sidenav-active: rgba(99, 102, 241, 0.24);
-  --dentis-sidenav-active-strong: rgba(6, 182, 212, 0.18);
+  --dentis-sidenav-active: rgba(13, 148, 136, 0.30);
+  --dentis-sidenav-active-strong: rgba(14, 165, 233, 0.20);
   --dentis-shadow-sm: 0 4px 14px rgba(15, 23, 42, 0.06);
   --dentis-shadow-md: 0 14px 40px rgba(15, 23, 42, 0.12);
   --dentis-radius: 16px;
+
+  /* Escala tipográfica */
+  --dentis-font-ui: 'Inter', 'Roboto', sans-serif;
+  --dentis-font-display: 'IBM Plex Sans', 'Inter', sans-serif;
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-base: 14px;
+  --fs-md: 16px;
+  --fs-lg: 20px;
+  --fs-xl: 28px;
+  --fs-display: 40px;
 }
 
 body.theme-dark {
-  --dentis-primary: #818cf8;
-  --dentis-primary-dark: #4f46e5;
-  --dentis-accent: #22d3ee;
+  --dentis-primary: #2dd4bf;
+  --dentis-primary-dark: #0d9488;
+  --dentis-accent: #38bdf8;
   --dentis-success: #4ade80;
   --dentis-warn: #f87171;
-  --dentis-text: #e5eefb;
+  --dentis-text: #e6f1f2;
   --dentis-text-muted: #94a3b8;
   --dentis-border: rgba(148, 163, 184, 0.2);
-  --dentis-surface: rgba(15, 23, 42, 0.88);
-  --dentis-surface-alt: rgba(30, 41, 59, 0.92);
-  --dentis-sidenav-surface: linear-gradient(180deg, #020617 0%, #0f172a 55%, #172554 100%);
-  --dentis-sidenav-text: #f8fbff;
+  --dentis-surface: rgba(15, 30, 33, 0.88);
+  --dentis-surface-alt: rgba(20, 45, 48, 0.92);
+  --dentis-sidenav-surface: linear-gradient(180deg, #04181a 0%, #082a2c 55%, #0a3a3d 100%);
+  --dentis-sidenav-text: #f1fbfb;
   --dentis-sidenav-text-muted: #cbd5e1;
-  --dentis-sidenav-icon: #e2e8f0;
-  --dentis-sidenav-border: rgba(148, 163, 184, 0.16);
-  --dentis-sidenav-hover: rgba(129, 140, 248, 0.16);
-  --dentis-sidenav-active: rgba(129, 140, 248, 0.22);
-  --dentis-sidenav-active-strong: rgba(34, 211, 238, 0.14);
+  --dentis-sidenav-icon: #e2f5f5;
+  --dentis-sidenav-border: rgba(148, 200, 200, 0.16);
+  --dentis-sidenav-hover: rgba(45, 212, 191, 0.16);
+  --dentis-sidenav-active: rgba(45, 212, 191, 0.22);
+  --dentis-sidenav-active-strong: rgba(56, 189, 248, 0.14);
   --dentis-shadow-sm: 0 4px 14px rgba(2, 6, 23, 0.35);
   --dentis-shadow-md: 0 14px 40px rgba(2, 6, 23, 0.45);
-  background: radial-gradient(circle at top left, rgba(129, 140, 248, 0.16), transparent 28%),
-  radial-gradient(circle at bottom right, rgba(34, 211, 238, 0.14), transparent 24%),
-  linear-gradient(180deg, #020617 0%, #0f172a 100%);
+  background: radial-gradient(circle at top left, rgba(45, 212, 191, 0.16), transparent 28%),
+  radial-gradient(circle at bottom right, rgba(56, 189, 248, 0.14), transparent 24%),
+  linear-gradient(180deg, #04181a 0%, #0f2a2e 100%);
 }
 
 html {
-  font-family: 'Inter', 'Roboto', sans-serif;
+  font-family: var(--dentis-font-ui);
   color-scheme: light;
 }
 
@@ -66,9 +78,9 @@ body {
   min-height: 100%;
   margin: 0;
   padding: 0;
-  background: radial-gradient(circle at top left, rgba(79, 70, 229, 0.08), transparent 28%),
-  radial-gradient(circle at top right, rgba(6, 182, 212, 0.08), transparent 24%),
-  linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+  background: radial-gradient(circle at top left, rgba(13, 148, 136, 0.08), transparent 28%),
+  radial-gradient(circle at top right, rgba(14, 165, 233, 0.08), transparent 24%),
+  linear-gradient(180deg, #f6fafb 0%, #e9f6f5 100%);
   color: var(--dentis-text);
 }
 
@@ -106,7 +118,8 @@ a {
 
 .page-title {
   margin: 0 0 4px;
-  font-size: 28px;
+  font-family: var(--dentis-font-display);
+  font-size: var(--fs-xl);
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--dentis-text);
@@ -173,11 +186,11 @@ a {
 }
 
 .mat-mdc-row:hover {
-  background: rgba(79, 70, 229, 0.03);
+  background: rgba(13, 148, 136, 0.04);
 }
 
 body.theme-dark .mat-mdc-row:hover {
-  background: rgba(129, 140, 248, 0.08);
+  background: rgba(45, 212, 191, 0.08);
 }
 
 body.theme-dark .mat-mdc-cell,
@@ -212,12 +225,23 @@ body.theme-dark textarea {
 .status-chip {
   display: inline-flex;
   align-items: center;
+  gap: 6px;
   padding: 4px 12px;
   border-radius: 16px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+
+  /* punto líder: refuerzo no-solo-color (accesibilidad) */
+  &::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
 
   &.status-active,
   &.status-confirmed,
@@ -258,4 +282,114 @@ body.theme-dark textarea {
   border: 1px solid rgba(220, 38, 38, 0.15);
   padding: 12px 14px;
   border-radius: 12px;
+}
+
+/* ───────── Escala tipográfica ───────── */
+.text-xs { font-size: var(--fs-xs); }
+.text-sm { font-size: var(--fs-sm); }
+.text-base { font-size: var(--fs-base); }
+.text-lg { font-size: var(--fs-lg); }
+.text-xl { font-size: var(--fs-xl); }
+.text-display { font-size: var(--fs-display); }
+.font-display { font-family: var(--dentis-font-display); }
+.text-muted { color: var(--dentis-text-muted); }
+
+/* ───────── Marca / acentos ───────── */
+.brand-gradient {
+  background: linear-gradient(135deg, var(--dentis-primary) 0%, var(--dentis-accent) 100%);
+}
+.text-gradient {
+  background: linear-gradient(135deg, var(--dentis-primary) 0%, var(--dentis-accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ───────── Stat card reutilizable ───────── */
+.stat-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+}
+.stat-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+.stat-value {
+  font-family: var(--dentis-font-display);
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+/* ───────── Estado vacío ───────── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 10px;
+  padding: 48px 24px;
+  color: var(--dentis-text-muted);
+
+  .empty-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--dentis-primary) 10%, transparent);
+    color: var(--dentis-primary);
+    margin-bottom: 4px;
+
+    .mat-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+    }
+  }
+
+  .empty-title {
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--dentis-text);
+  }
+}
+
+/* ───────── Skeleton loaders ───────── */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--dentis-text-muted) 14%, transparent);
+  border-radius: 8px;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+    animation: skeleton-shimmer 1.4s infinite;
+  }
+}
+.skeleton-line {
+  height: 12px;
+  margin-bottom: 8px;
+}
+@keyframes skeleton-shimmer {
+  100% { transform: translateX(100%); }
+}
+
+/* ───────── Focus ring accesible ───────── */
+:focus-visible {
+  outline: 2px solid var(--dentis-accent);
+  outline-offset: 2px;
 }

@@ -161,3 +161,16 @@ variable "domain_name" {
   type        = string
   default     = ""
 }
+
+# ─── Landing page ─────────────────────────────────────────────────────────────
+variable "landing_domain_name" {
+  description = "Custom domain for the landing page (e.g. dentis.com.ve). Leave empty to use CloudFront URL."
+  type        = string
+  default     = ""
+}
+
+variable "landing_certificate_arn" {
+  description = "ACM certificate ARN (us-east-1) for the landing domain. Required if landing_domain_name is set."
+  type        = string
+  default     = ""
+}

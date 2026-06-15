@@ -20,7 +20,7 @@ import { ClinicService } from '../../../core/services/clinic.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Patient } from '../../../core/models/patient.model';
 import { Clinic, ClinicUser } from '../../../core/models/clinic.model';
-import { EntityAutocompleteComponent } from '../../../shared/components/entity-autocomplete/entity-autocomplete.component';
+import { AutocompleteOption, EntityAutocompleteComponent } from '../../../shared/components/entity-autocomplete/entity-autocomplete.component';
 
 @Component({
   selector: 'app-appointment-form',
@@ -226,33 +226,29 @@ export class AppointmentFormComponent implements OnInit {
     this.router.navigate(['/scheduling']);
   }
 
-  displayPatient = (patient: Patient | string | null): string => {
-    if (!patient || typeof patient === 'string') {
-      return patient ?? '';
-    }
-
+  displayPatient = (value: AutocompleteOption | null): string => {
+    if (!value || typeof value === 'string') return value ?? '';
+    const patient = value as Patient;
     return `${patient.firstName} ${patient.lastName} · ${patient.idDocument}`;
   };
 
-  displayDentist = (dentist: ClinicUser | string | null): string => {
-    if (!dentist || typeof dentist === 'string') {
-      return dentist ?? '';
-    }
-
+  displayDentist = (value: AutocompleteOption | null): string => {
+    if (!value || typeof value === 'string') return value ?? '';
+    const dentist = value as ClinicUser;
     return `${dentist.fullName} · ${dentist.username}`;
   };
 
-  onPatientSelected(patient: Patient): void {
-    this.form.controls.patientId.setValue(patient.id);
+  onPatientSelected(value: AutocompleteOption): void {
+    this.form.controls.patientId.setValue((value as Patient).id);
   }
 
-  onDentistSelected(dentist: ClinicUser): void {
-    this.form.controls.dentistId.setValue(dentist.id);
+  onDentistSelected(value: AutocompleteOption): void {
+    this.form.controls.dentistId.setValue((value as ClinicUser).id);
   }
 
-  trackPatient = (patient: Patient): string => patient.id;
+  trackPatient = (value: AutocompleteOption): string => (value as Patient).id;
 
-  trackDentist = (dentist: ClinicUser): string => dentist.id;
+  trackDentist = (value: AutocompleteOption): string => (value as ClinicUser).id;
 
   searchTerm(value: string | Patient | ClinicUser | null): string {
     if (typeof value === 'string') {
@@ -398,9 +394,10 @@ export class AppointmentFormComponent implements OnInit {
     if (!value) {
       return value;
     }
-
+    // Treat input as America/Caracas (UTC-4, no DST since 2016)
     const trimmed = value.trim().replace('Z', '');
-    return trimmed.length === 16 ? `${trimmed}:00` : trimmed;
+    const full = trimmed.length === 16 ? `${trimmed}:00` : trimmed;
+    return `${full}-04:00`;
   }
 
   private toDatetimeLocal(value: Date): string {

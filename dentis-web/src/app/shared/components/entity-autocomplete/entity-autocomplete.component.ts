@@ -6,6 +6,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 
+/** Minimal shape required for autocomplete options. */
+export type AutocompleteOption = object | string;
+
 @Component({
   selector: 'app-entity-autocomplete',
   standalone: true,
@@ -35,7 +38,7 @@ import { MatInputModule } from '@angular/material/input';
       <mat-autocomplete
         #autocomplete="matAutocomplete"
         [displayWith]="displayWith()"
-        (optionSelected)="handleOptionSelected($any($event))">
+        (optionSelected)="handleOptionSelected($event)">
         @for (option of options(); track trackByValue()(option)) {
           <mat-option [value]="option">
             {{ displayWith()(option) }}
@@ -59,16 +62,19 @@ export class EntityAutocompleteComponent {
   readonly errorMessage = input<string>('Please select an option from the list');
   readonly disabled = input<boolean>(false);
   readonly showEmptyState = input<boolean>(false);
-  readonly control = input.required<FormControl<any>>();
-  readonly options = input<any[]>([]);
-  readonly displayWith = input<(value: any) => string>((value) =>
-    typeof value === 'string' ? value : ''
+  // FormControl<unknown> covers all entity/string union types used by callers
+  readonly control = input.required<FormControl<unknown>>();
+  readonly options = input<AutocompleteOption[]>([]);
+  readonly displayWith = input<(value: AutocompleteOption | null) => string>(
+    (value) => (typeof value === 'string' ? value : '')
   );
-  readonly trackByValue = input<(value: any) => string | number>((value) => JSON.stringify(value));
-  readonly optionSelected = output<any>();
+  readonly trackByValue = input<(value: AutocompleteOption) => string | number>(
+    (value) => JSON.stringify(value)
+  );
+  readonly optionSelected = output<AutocompleteOption>();
 
   handleOptionSelected(event: MatAutocompleteSelectedEvent): void {
-    this.optionSelected.emit(event.option.value);
+    this.optionSelected.emit(event.option.value as AutocompleteOption);
   }
 }
 

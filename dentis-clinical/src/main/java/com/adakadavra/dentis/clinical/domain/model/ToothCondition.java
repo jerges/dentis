@@ -12,5 +12,7 @@ public enum ToothCondition {
     MALFORMATION,
     EXTRACTED,
     ERUPTING,
-    IMPACTED
+    IMPACTED,
+    ROOT_REMNANT,
+    DEFECTIVE_FILLING
 }

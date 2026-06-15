@@ -124,13 +124,13 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
     .tab-content { padding: 24px 0; }
     .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
     .info-card mat-card-content { padding-top: 8px; }
-    .info-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
-    .label { color: #666; font-weight: 500; }
+    .info-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--dentis-border); font-size: 14px; }
+    .label { color: var(--dentis-text-muted); font-weight: 500; }
     .apt-card { margin-bottom: 12px; }
     .apt-date { font-weight: 600; font-size: 15px; }
-    .apt-reason { color: #555; margin-top: 2px; }
-    .apt-dentist { font-size: 12px; color: #888; margin-top: 2px; }
-    .empty-msg { color: #999; text-align: center; padding: 40px; }
+    .apt-reason { color: var(--dentis-text-muted); margin-top: 2px; }
+    .apt-dentist { font-size: 12px; color: var(--dentis-text-muted); margin-top: 2px; }
+    .empty-msg { color: var(--dentis-text-muted); text-align: center; padding: 40px; }
   `]
 })
 export class PatientDetailComponent implements OnInit {

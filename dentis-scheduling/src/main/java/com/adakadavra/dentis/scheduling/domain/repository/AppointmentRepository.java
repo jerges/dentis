@@ -21,6 +21,8 @@ public interface AppointmentRepository {
 
     Page<Appointment> findByDentistId(UUID dentistId, Pageable pageable);
 
+    List<Appointment> findScheduledBetween(LocalDateTime from, LocalDateTime to);
+
     boolean hasConflict(UUID dentistId, LocalDateTime start, LocalDateTime end, UUID excludeAppointmentId);
 
     void cancel(UUID id);

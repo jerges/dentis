@@ -159,6 +159,16 @@ public class BillingStepDefinitions {
         executeGet("/api/v1/billing/payments/patient/" + patientId);
     }
 
+    @When("I approve a non-existent budget")
+    public void iApproveNonExistentBudget() throws Exception {
+        MvcResult result = mockMvc.perform(
+                patch("/api/v1/billing/budgets/{id}/approve", "00000000-0000-0000-0000-000000000000"))
+                .andReturn();
+        lastStatus = result.getResponse().getStatus();
+        lastBody = result.getResponse().getContentAsString();
+        lastException = result.getResolvedException();
+    }
+
     // ── Then steps ────────────────────────────────────────────────────────────
 
     @Then("the response status should be {int}")

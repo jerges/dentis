@@ -122,6 +122,20 @@ export const routes: Routes = [
         data: { roles: ['ADMIN'] },
         loadComponent: () =>
           import('./features/clinics/users/clinic-users.component').then((m) => m.ClinicUsersComponent)
+      },
+      {
+        path: 'ia/chat',
+        canActivate: [authGuard],
+        data: { roles: ['SUPER_ADMIN', 'ADMIN'], staffTypes: ['DENTIST'] },
+        loadComponent: () =>
+          import('./features/ia/chat/ia-chat.component').then((m) => m.IaChatComponent)
+      },
+      {
+        path: 'ia/stats',
+        canActivate: [authGuard],
+        data: { roles: ['SUPER_ADMIN', 'ADMIN'] },
+        loadComponent: () =>
+          import('./features/ia/stats/ia-stats.component').then((m) => m.IaStatsComponent)
       }
     ]
   },

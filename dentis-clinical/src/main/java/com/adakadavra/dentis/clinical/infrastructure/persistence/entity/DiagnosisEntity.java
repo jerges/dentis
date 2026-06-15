@@ -38,6 +38,9 @@ public class DiagnosisEntity implements Persistable<UUID> {
     @Column(name = "dentist_id", nullable = false)
     private UUID dentistId;
 
+    @Column(name = "tooth_number")
+    private Integer toothNumber;
+
     @Transient
     @Builder.Default
     private boolean isNew = true;

@@ -18,4 +18,5 @@ public class Diagnosis {
     private final String description;
     private final LocalDate diagnosedAt;
     private final UUID dentistId;
+    private final Integer toothNumber;
 }

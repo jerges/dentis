@@ -122,6 +122,21 @@ public class PatientStepDefinitions {
         executeGet("/api/v1/patients/00000000-0000-0000-0000-000000000000");
     }
 
+    @When("patient api updates a non-existent patient")
+    public void patientApiUpdatesNonExistent() throws Exception {
+        Map<String, Object> updatePayload = Map.of(
+                "firstName", "Ghost",
+                "contactInfo", Map.of("email", "ghost@dentis.dev", "phoneNumber", "+34 600000099")
+        );
+        MvcResult result = mockMvc.perform(put("/api/v1/patients/{id}", UUID.fromString("00000000-0000-0000-0000-000000000000"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updatePayload)))
+                .andReturn();
+        lastStatus = result.getResponse().getStatus();
+        lastBody = result.getResponse().getContentAsString();
+        lastException = result.getResolvedException();
+    }
+
     @Then("patient response status should be {int}")
     public void patientResponseStatusShouldBe(int expected) {
         assertThat(lastStatus)

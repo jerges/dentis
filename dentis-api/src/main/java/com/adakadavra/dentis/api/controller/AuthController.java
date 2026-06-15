@@ -40,10 +40,12 @@ public class AuthController {
                 .findFirst()
                 .map(a -> a.getAuthority().replace("ROLE_", ""))
                 .orElse("USER");
+        String staffType = userDetails instanceof User u ? u.getStaffType().name() : null;
         return ResponseEntity.ok(ApiResponse.ok(TokenResponse.builder()
                 .token(token)
                 .username(userDetails.getUsername())
                 .role(role)
+                .staffType(staffType)
                 .clinicId(userDetails instanceof User user && user.getClinicId() != null ? user.getClinicId().toString() : null)
                 .expiresIn(jwtService.getExpirationMs())
                 .build()));
@@ -69,6 +71,7 @@ public class AuthController {
         private final String type = "Bearer";
         private final String username;
         private final String role;
+        private final String staffType;
         private final String clinicId;
         private final long expiresIn;
     }

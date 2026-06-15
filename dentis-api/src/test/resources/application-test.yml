@@ -5,6 +5,8 @@ spring:
     show-sql: true
   flyway:
     enabled: false
+  liquibase:
+    enabled: false
   mail:
     host: localhost
     port: 25

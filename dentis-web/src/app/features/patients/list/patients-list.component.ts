@@ -114,15 +114,13 @@ import { PatientService } from '../../../core/services/patient.service';
   `,
   styles: [`
     .page-header { margin-bottom: 24px; }
-    .page-title { margin: 0 0 4px; font-size: 24px; font-weight: 700; color: #1a237e; }
-    .page-subtitle { margin: 0; color: #666; font-size: 13px; }
     .search-field { width: 100%; max-width: 420px; margin-bottom: 16px; }
-    .patient-name { font-weight: 500; }
-    .patient-sub { font-size: 12px; color: #888; }
+    .patient-name { font-weight: 600; }
+    .patient-sub { font-size: 12px; color: var(--dentis-text-muted); }
     .w-full { width: 100%; }
-    .table-row:hover { background: #f5f5f5; cursor: pointer; }
+    .table-row:hover { background: rgba(13, 148, 136, 0.04); cursor: pointer; }
     .no-data-row td { padding: 40px; text-align: center; }
-    .no-data-cell { display: flex; align-items: center; justify-content: center; gap: 8px; color: #999; }
+    .no-data-cell { display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--dentis-text-muted); }
   `]
 })
 export class PatientsListComponent implements OnInit {

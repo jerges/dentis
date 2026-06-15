@@ -19,7 +19,7 @@ variable "app_name" {
 variable "instance_type" {
   description = "EC2 instance type"
   type        = string
-  default     = "t2.small"
+  default     = "t4g.small"
 }
 
 variable "root_volume_size" {
@@ -52,15 +52,22 @@ variable "app_port" {
 }
 
 variable "web_port" {
-  description = "Frontend HTTP port published on the host"
+  description = "Frontend (backoffice) HTTP port published on the host"
+  type        = number
+  default     = 8081
+}
+
+variable "landing_port" {
+  description = "Landing page HTTP port published on the host"
   type        = number
   default     = 80
 }
 
+
 variable "assign_eip" {
-  description = "Assign Elastic IP for stable public address"
+  description = "Assign Elastic IP for stable public address across stop/start cycles"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "create_key_pair" {
@@ -158,6 +165,12 @@ variable "spring_profiles_active" {
   default     = "dev"
 }
 
+variable "alert_email" {
+  description = "Email address for CloudWatch alarm notifications (SNS). Leave empty to skip subscription."
+  type        = string
+  default     = ""
+}
+
 variable "vpc_cidr" {
   description = "CIDR for dedicated dev VPC"
   type        = string
@@ -174,5 +187,35 @@ variable "availability_zone" {
   description = "Specific AZ for the subnet. Leave null to auto-pick first AZ"
   type        = string
   default     = null
+}
+
+variable "attachments_bucket_name" {
+  description = "S3 bucket name for clinical attachments (images/X-rays). Leave empty to auto-generate."
+  type        = string
+  default     = ""
+}
+
+variable "prometheus_port" {
+  description = "Prometheus HTTP port published on the host"
+  type        = number
+  default     = 9090
+}
+
+variable "grafana_port" {
+  description = "Grafana HTTP port published on the host"
+  type        = number
+  default     = 3000
+}
+
+variable "monitoring_allowed_cidr" {
+  description = "CIDR allowed to access Prometheus and Grafana (restrict to your IP in production)"
+  type        = string
+  default     = "0.0.0.0/0"
+}
+
+variable "auto_stop_max_runtime_hours" {
+  description = "Hours the EC2 can be running before the auto-stop Lambda shuts it down"
+  type        = number
+  default     = 2
 }
 

@@ -1,0 +1,224 @@
+package com.adakadavra.dentis.api.controller;
+
+import com.adakadavra.dentis.api.config.S3StorageService;
+import com.adakadavra.dentis.api.security.entity.User;
+import com.adakadavra.dentis.api.security.entity.UserRole;
+import com.adakadavra.dentis.api.security.entity.UserStaffType;
+import com.adakadavra.dentis.api.security.service.TenantSecurityService;
+import com.adakadavra.dentis.clinical.domain.model.ClinicalAttachment;
+import com.adakadavra.dentis.clinical.domain.service.ClinicalAttachmentService;
+import com.adakadavra.dentis.common.response.ApiError;
+import com.adakadavra.dentis.common.response.ApiResponse;
+import com.adakadavra.dentis.ia.domain.model.ChatMessage;
+import com.adakadavra.dentis.ia.domain.model.ChatSession;
+import com.adakadavra.dentis.ia.domain.service.IaChatService;
+import com.adakadavra.dentis.ia.domain.service.IngestionService;
+import com.adakadavra.dentis.ia.infrastructure.config.IaProperties;
+import com.adakadavra.dentis.ia.infrastructure.persistence.repository.ChatSessionJpaRepository;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/v1/ia")
+@RequiredArgsConstructor
+@Tag(name = "Asistente IA", description = "Asistente odontológico experto (solo dentistas y super admin)")
+public class IaController {
+
+    private final IaChatService chatService;
+    private final IngestionService ingestionService;
+    private final ClinicalAttachmentService attachmentService;
+    private final S3StorageService s3;
+    private final TenantSecurityService tenantSecurity;
+    private final IaProperties props;
+    private final ChatSessionJpaRepository sessionJpaRepo;
+    private final MeterRegistry meterRegistry;
+
+    // ─── Guard helper ────────────────────────────────────────────────────────
+
+    private static final String IA_GUARD =
+            "hasAnyRole('SUPER_ADMIN', 'ADMIN') or 'DENTIST' == principal?.staffType?.name()";
+
+    // ─── Resolve caller identity ──────────────────────────────────────────────
+
+    private UUID dentistId(User user) {
+        return user.getId();
+    }
+
+    private UUID resolveClinicId(User user, UUID requestedClinicId) {
+        if (user.getRole() == UserRole.SUPER_ADMIN) {
+            return requestedClinicId; // may be null → retrieval skips RAG
+        }
+        return tenantSecurity.currentClinicId()
+                .orElseThrow(() -> new IllegalStateException("No clinic context"));
+    }
+
+    // ─── Chat sessions ────────────────────────────────────────────────────────
+
+    @PostMapping("/chat/sessions")
+    @PreAuthorize(IA_GUARD)
+    @Operation(summary = "Create a new chat session")
+    public ResponseEntity<ApiResponse<ChatSession>> createSession(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody CreateSessionRequest req) {
+        if (!props.isEnabled()) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(ApiResponse.error(ApiError.builder().code("IA_DISABLED").message("El módulo de IA está deshabilitado").build()));
+        }
+        UUID clinicId = resolveClinicId(user, req.clinicId());
+        ChatSession session = chatService.createSession(dentistId(user), clinicId, req.title());
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(session, "Sesión creada"));
+    }
+
+    @GetMapping("/chat/sessions")
+    @PreAuthorize(IA_GUARD)
+    @Operation(summary = "List chat sessions for the current user")
+    public ResponseEntity<ApiResponse<List<ChatSession>>> listSessions(
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(ApiResponse.ok(chatService.getSessions(dentistId(user))));
+    }
+
+    @GetMapping("/chat/sessions/{id}/messages")
+    @PreAuthorize(IA_GUARD)
+    @Operation(summary = "Get messages for a session")
+    public ResponseEntity<ApiResponse<List<ChatMessage>>> getMessages(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.ok(chatService.getMessages(id, dentistId(user))));
+    }
+
+    @PostMapping("/chat/sessions/{id}/messages")
+    @PreAuthorize(IA_GUARD)
+    @Operation(summary = "Send a message and get the assistant's response")
+    public ResponseEntity<ApiResponse<ChatMessage>> sendMessage(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID id,
+            @Valid @RequestBody SendMessageRequest req) {
+        if (!props.isEnabled()) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(ApiResponse.error(ApiError.builder().code("IA_DISABLED").message("El módulo de IA está deshabilitado").build()));
+        }
+        String clinicTag = tenantSecurity.currentClinicId()
+                .map(UUID::toString).orElse("global");
+
+        Timer.Sample sample = Timer.start(meterRegistry);
+        ChatMessage reply = chatService.sendMessage(id, dentistId(user), req.content());
+        sample.stop(Timer.builder("dentis.ia.request")
+                .tag("clinic_id", clinicTag)
+                .register(meterRegistry));
+
+        if (reply.getInputTokens() > 0) {
+            Counter.builder("dentis.ia.tokens").tag("type", "input").tag("clinic_id", clinicTag)
+                    .register(meterRegistry).increment(reply.getInputTokens());
+        }
+        if (reply.getOutputTokens() > 0) {
+            Counter.builder("dentis.ia.tokens").tag("type", "output").tag("clinic_id", clinicTag)
+                    .register(meterRegistry).increment(reply.getOutputTokens());
+            double cost = (reply.getInputTokens() / 1000.0 * 0.0008)
+                        + (reply.getOutputTokens() / 1000.0 * 0.0032);
+            Counter.builder("dentis.ia.cost.usd").tag("clinic_id", clinicTag)
+                    .register(meterRegistry).increment(cost);
+        }
+
+        return ResponseEntity.ok(ApiResponse.ok(reply));
+    }
+
+    @DeleteMapping("/chat/sessions/{id}")
+    @PreAuthorize(IA_GUARD)
+    @Operation(summary = "Delete a chat session")
+    public ResponseEntity<ApiResponse<Void>> deleteSession(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID id) {
+        chatService.deleteSession(id, dentistId(user));
+        return ResponseEntity.ok(ApiResponse.ok(null, "Sesión eliminada"));
+    }
+
+    // ─── Indexing ─────────────────────────────────────────────────────────────
+
+    @PostMapping("/index/reindex")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
+    @Operation(summary = "Re-index all clinical attachments for the current clinic")
+    public ResponseEntity<ApiResponse<String>> reindex(
+            @AuthenticationPrincipal User user,
+            @RequestParam(required = false) UUID clinicId) {
+        UUID targetClinic = resolveClinicId(user, clinicId);
+        if (targetClinic == null) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(ApiError.builder().code("MISSING_CLINIC").message("Se requiere clinicId").build()));
+        }
+        List<ClinicalAttachment> attachments = attachmentService.listByClinic(targetClinic);
+        List<IngestionService.AttachmentRef> refs = attachments.stream()
+                .map(a -> new IngestionService.AttachmentRef(a.getId(), a.getS3Key(), a.getContentType()))
+                .toList();
+        ingestionService.reindexClinic(targetClinic, refs, s3::getObjectBytes);
+        return ResponseEntity.accepted().body(
+                ApiResponse.ok("Re-indexación iniciada para " + refs.size() + " adjuntos"));
+    }
+
+    // ─── Stats ────────────────────────────────────────────────────────────────
+
+    @GetMapping("/stats")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "IA usage statistics (SUPER_ADMIN: all clinics, ADMIN: own clinic)")
+    public ResponseEntity<ApiResponse<IaStatsResponse>> getStats(@AuthenticationPrincipal User user) {
+        boolean isSuperAdmin = user.getRole() == UserRole.SUPER_ADMIN;
+
+        List<IaUserStats> rows;
+        long totalSessions;
+
+        if (isSuperAdmin) {
+            rows = sessionJpaRepo.getUsageAll().stream()
+                    .map(r -> new IaUserStats(
+                            (String) r[0],
+                            (String) r[1],
+                            toLong(r[2]),
+                            toLong(r[3]),
+                            toLong(r[4])))
+                    .toList();
+            totalSessions = sessionJpaRepo.count();
+        } else {
+            UUID clinicId = tenantSecurity.currentClinicId()
+                    .orElseThrow(() -> new IllegalStateException("No clinic context"));
+            rows = sessionJpaRepo.getUsageByClinic(clinicId).stream()
+                    .map(r -> new IaUserStats(
+                            (String) r[0],
+                            null,
+                            toLong(r[1]),
+                            toLong(r[2]),
+                            toLong(r[3])))
+                    .toList();
+            totalSessions = sessionJpaRepo.countByClinicId(clinicId);
+        }
+
+        long totalMessages    = rows.stream().mapToLong(IaUserStats::messages).sum();
+        long totalInputTokens = rows.stream().mapToLong(IaUserStats::inputTokens).sum();
+        long totalOutputTokens= rows.stream().mapToLong(IaUserStats::outputTokens).sum();
+
+        return ResponseEntity.ok(ApiResponse.ok(
+                new IaStatsResponse(totalSessions, totalMessages, totalInputTokens, totalOutputTokens, rows)));
+    }
+
+    private static long toLong(Object val) {
+        return val == null ? 0L : ((Number) val).longValue();
+    }
+
+    // ─── DTOs ─────────────────────────────────────────────────────────────────
+
+    public record CreateSessionRequest(String title, UUID clinicId) {}
+    public record SendMessageRequest(@NotBlank String content) {}
+    public record IaUserStats(String username, String clinicName, long messages, long inputTokens, long outputTokens) {}
+    public record IaStatsResponse(long totalSessions, long totalMessages, long totalInputTokens, long totalOutputTokens, List<IaUserStats> rows) {}
+}

@@ -1,5 +1,6 @@
 package com.adakadavra.dentis.api.controller;
 
+import com.adakadavra.dentis.api.security.service.TenantSecurityService;
 import com.adakadavra.dentis.common.response.ApiResponse;
 import com.adakadavra.dentis.common.response.PageResponse;
 import com.adakadavra.dentis.patient.application.dto.CreatePatientRequest;
@@ -17,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -26,25 +28,33 @@ import java.util.UUID;
 public class PatientController {
 
     private final PatientUseCase patientUseCase;
+    private final TenantSecurityService tenantSecurity;
 
     @PostMapping
     @Operation(summary = "Register a new patient")
     public ResponseEntity<ApiResponse<PatientResponse>> create(@Valid @RequestBody CreatePatientRequest request) {
-        PatientResponse response = patientUseCase.createPatient(request);
+        PatientResponse response = patientUseCase.createPatient(request, tenantSecurity.currentClinicId().orElse(null));
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(response, "Patient registered successfully"));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Get patient by ID")
     public ResponseEntity<ApiResponse<PatientResponse>> findById(@PathVariable UUID id) {
-        return ResponseEntity.ok(ApiResponse.ok(patientUseCase.findById(id)));
+        Optional<UUID> clinicId = tenantSecurity.currentClinicId();
+        PatientResponse response = clinicId.isPresent()
+                ? patientUseCase.findByIdInClinic(id, clinicId.get())
+                : patientUseCase.findById(id);
+        return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
     @GetMapping
     @Operation(summary = "List all patients")
     public ResponseEntity<ApiResponse<PageResponse<PatientResponse>>> findAll(
             @PageableDefault(size = 20, sort = "lastName") Pageable pageable) {
-        Page<PatientResponse> page = patientUseCase.findAll(pageable);
+        Optional<UUID> clinicId = tenantSecurity.currentClinicId();
+        Page<PatientResponse> page = clinicId.isPresent()
+                ? patientUseCase.findAllByClinicId(clinicId.get(), pageable)
+                : patientUseCase.findAll(pageable);
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(page)));
     }
 
@@ -53,7 +63,10 @@ public class PatientController {
     public ResponseEntity<ApiResponse<PageResponse<PatientResponse>>> search(
             @RequestParam String name,
             @PageableDefault(size = 20) Pageable pageable) {
-        Page<PatientResponse> page = patientUseCase.searchByName(name, pageable);
+        Optional<UUID> clinicId = tenantSecurity.currentClinicId();
+        Page<PatientResponse> page = clinicId.isPresent()
+                ? patientUseCase.searchByNameAndClinicId(name, clinicId.get(), pageable)
+                : patientUseCase.searchByName(name, pageable);
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(page)));
     }
 

@@ -14,10 +14,10 @@ import { MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { catchError, debounceTime, distinctUntilChanged, map, Observable, of, startWith, switchMap, tap } from 'rxjs';
 import { BillingService } from '../../../core/services/billing.service';
-import { Budget, Payment } from '../../../core/models/billing.model';
+import { Budget, Payment, PaymentMethod } from '../../../core/models/billing.model';
 import { Patient } from '../../../core/models/patient.model';
 import { PatientService } from '../../../core/services/patient.service';
-import { EntityAutocompleteComponent } from '../../../shared/components/entity-autocomplete/entity-autocomplete.component';
+import { AutocompleteOption, EntityAutocompleteComponent } from '../../../shared/components/entity-autocomplete/entity-autocomplete.component';
 
 @Component({
   selector: 'app-payments',
@@ -141,14 +141,12 @@ import { EntityAutocompleteComponent } from '../../../shared/components/entity-a
   `,
   styles: [`
     .page-header { margin-bottom: 24px; }
-    .page-title { margin: 0 0 4px; font-size: 24px; font-weight: 700; color: #1a237e; }
-    .page-subtitle { margin: 0; color: #666; font-size: 13px; }
     .form-card { margin-bottom: 24px; max-width: 860px; }
     .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
     .full-span { grid-column: 1 / -1; }
     .form-actions { display: flex; justify-content: flex-end; }
     .w-full { width: 100%; }
-    .amount { font-weight: 600; color: #2e7d32; }
+    .amount { font-weight: 700; color: var(--dentis-success); }
     @media (max-width: 900px) {
       .form-grid { grid-template-columns: 1fr; }
     }
@@ -231,7 +229,16 @@ export class PaymentsComponent {
     }
 
     this.loading = true;
-    this.billingService.registerPayment(this.form.getRawValue() as any).subscribe({
+    const val = this.form.getRawValue();
+    const request: Partial<Payment> = {
+      budgetId: val.budgetId ?? '',
+      patientId: val.patientId ?? '',
+      amount: Number(val.amount),
+      paymentMethod: (val.paymentMethod as PaymentMethod) ?? 'CASH',
+      invoiceReference: val.invoiceReference || undefined,
+      notes: val.notes || undefined
+    };
+    this.billingService.registerPayment(request).subscribe({
       next: (p) => {
         this.dataSource.data = [p, ...this.dataSource.data];
         this.snack.open('Pago registrado', 'OK', { duration: 3000 });
@@ -254,24 +261,21 @@ export class PaymentsComponent {
     });
   }
 
-  displayPatient = (patient: Patient | string | null): string => {
-    if (!patient || typeof patient === 'string') {
-      return patient ?? '';
-    }
-
+  displayPatient = (value: AutocompleteOption | null): string => {
+    if (!value || typeof value === 'string') return value ?? '';
+    const patient = value as Patient;
     return `${patient.firstName} ${patient.lastName} · ${patient.idDocument}`;
   };
 
-  displayBudget = (budget: Budget | string | null): string => {
-    if (!budget || typeof budget === 'string') {
-      return budget ?? '';
-    }
-
+  displayBudget = (value: AutocompleteOption | null): string => {
+    if (!value || typeof value === 'string') return value ?? '';
+    const budget = value as Budget;
     const amount = this.calculateBudgetTotal(budget);
     return `${budget.status} · ${budget.createdAt?.slice(0, 10) ?? 'No date'} · ${amount.toFixed(2)} USD`;
   };
 
-  onPatientSelected(patient: Patient): void {
+  onPatientSelected(value: AutocompleteOption): void {
+    const patient = value as Patient;
     this.form.controls.patientId.setValue(patient.id);
     this.form.controls.budgetId.setValue('');
     this.budgetSearchControl.reset('');
@@ -279,13 +283,13 @@ export class PaymentsComponent {
     this.loadPaymentsByPatient(patient.id);
   }
 
-  onBudgetSelected(budget: Budget): void {
-    this.form.controls.budgetId.setValue(budget.id);
+  onBudgetSelected(value: AutocompleteOption): void {
+    this.form.controls.budgetId.setValue((value as Budget).id);
   }
 
-  trackPatient = (patient: Patient): string => patient.id;
+  trackPatient = (value: AutocompleteOption): string => (value as Patient).id;
 
-  trackBudget = (budget: Budget): string => budget.id;
+  trackBudget = (value: AutocompleteOption): string => (value as Budget).id;
 
   searchTerm(value: string | Patient | Budget | null): string {
     if (typeof value === 'string') {
