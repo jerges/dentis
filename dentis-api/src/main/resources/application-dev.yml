@@ -3,6 +3,8 @@ spring:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:dentis_db}
     username: ${DB_USER:dentis}
     password: ${DB_PASSWORD:dentis}
+  liquibase:
+    contexts: demo
   jpa:
     hibernate:
       ddl-auto: validate

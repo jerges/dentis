@@ -81,6 +81,16 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/billing/payments/payments.component').then((m) => m.PaymentsComponent)
       },
+      // Documents
+      {
+        path: 'documents',
+        canActivate: [authGuard],
+        data: { roles: ['SUPER_ADMIN', 'ADMIN', 'USER'] },
+        loadComponent: () =>
+          import('./features/documents/manager/documents-manager.component').then(
+            (m) => m.DocumentsManagerComponent
+          )
+      },
       {
         path: 'clinics',
         canActivate: [authGuard],
@@ -122,6 +132,20 @@ export const routes: Routes = [
         data: { roles: ['ADMIN'] },
         loadComponent: () =>
           import('./features/clinics/users/clinic-users.component').then((m) => m.ClinicUsersComponent)
+      },
+      {
+        path: 'ia/chat',
+        canActivate: [authGuard],
+        data: { roles: ['SUPER_ADMIN', 'ADMIN'], staffTypes: ['DENTIST'] },
+        loadComponent: () =>
+          import('./features/ia/chat/ia-chat.component').then((m) => m.IaChatComponent)
+      },
+      {
+        path: 'ia/stats',
+        canActivate: [authGuard],
+        data: { roles: ['SUPER_ADMIN', 'ADMIN'] },
+        loadComponent: () =>
+          import('./features/ia/stats/ia-stats.component').then((m) => m.IaStatsComponent)
       }
     ]
   },

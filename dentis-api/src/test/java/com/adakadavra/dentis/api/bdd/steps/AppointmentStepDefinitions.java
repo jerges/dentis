@@ -143,6 +143,24 @@ public class AppointmentStepDefinitions {
         executePost("/api/v1/appointments", validPayload(start, end));
     }
 
+    @When("appointment api confirms a non-existent appointment")
+    public void appointmentApiConfirmsNonExistent() throws Exception {
+        MvcResult result = mockMvc.perform(
+                patch("/api/v1/appointments/{id}/confirm", "00000000-0000-0000-0000-000000000000"))
+                .andReturn();
+        lastStatus = result.getResponse().getStatus();
+        lastBody = result.getResponse().getContentAsString();
+    }
+
+    @When("appointment api cancels a non-existent appointment")
+    public void appointmentApiCancelsNonExistent() throws Exception {
+        MvcResult result = mockMvc.perform(
+                patch("/api/v1/appointments/{id}/cancel", "00000000-0000-0000-0000-000000000000"))
+                .andReturn();
+        lastStatus = result.getResponse().getStatus();
+        lastBody = result.getResponse().getContentAsString();
+    }
+
     @Then("appointment response status should be {int}")
     public void appointmentResponseStatusShouldBe(int expected) {
         assertThat(lastStatus).isEqualTo(expected);

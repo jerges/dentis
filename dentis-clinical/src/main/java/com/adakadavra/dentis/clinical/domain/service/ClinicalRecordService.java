@@ -30,6 +30,8 @@ public class ClinicalRecordService {
         }
         ClinicalRecord record = ClinicalRecord.builder()
                 .patientId(patientId)
+                .dentitionType(DentitionType.PERMANENT)
+                .createdAt(LocalDateTime.now())
                 .odontogram(new ArrayList<>())
                 .evolutions(new ArrayList<>())
                 .diagnoses(new ArrayList<>())
@@ -60,11 +62,33 @@ public class ClinicalRecordService {
     }
 
     @Transactional
+    public ClinicalRecord addDiagnosis(UUID patientId, Diagnosis diagnosis) {
+        ClinicalRecord record = findByPatientId(patientId);
+        List<Diagnosis> diagnoses = new ArrayList<>(record.getDiagnoses());
+        diagnoses.add(diagnosis);
+        ClinicalRecord updated = record.withDiagnoses(diagnoses).withUpdatedAt(LocalDateTime.now());
+        return clinicalRecordRepository.save(updated);
+    }
+
+    @Transactional
     public ClinicalRecord addTreatmentPlan(UUID patientId, TreatmentPlan plan) {
         ClinicalRecord record = findByPatientId(patientId);
         List<TreatmentPlan> plans = new ArrayList<>(record.getTreatmentPlans());
         plans.add(plan);
         ClinicalRecord updated = record.withTreatmentPlans(plans).withUpdatedAt(LocalDateTime.now());
         return clinicalRecordRepository.save(updated);
+    }
+
+    @Transactional
+    public ClinicalRecord updateDentitionType(UUID patientId, DentitionType dentitionType) {
+        ClinicalRecord record = findByPatientId(patientId);
+        ClinicalRecord updated = record.withDentitionType(dentitionType).withUpdatedAt(LocalDateTime.now());
+        return clinicalRecordRepository.save(updated);
+    }
+
+    @Transactional
+    public ClinicalRecord getOrCreateForPatient(UUID patientId) {
+        return clinicalRecordRepository.findByPatientId(patientId)
+                .orElseGet(() -> createForPatient(patientId));
     }
 }

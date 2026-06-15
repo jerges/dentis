@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Cita Cancelada — Dentis</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f5f5f5; margin:0; padding:0; }
+    .container { max-width:600px; margin:40px auto; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.1); }
+    .header { background:#d32f2f; color:#fff; padding:32px 24px; text-align:center; }
+    .header h1 { margin:0; font-size:24px; }
+    .body { padding:32px 24px; color:#333; }
+    .body p { line-height:1.6; }
+    .detail-box { background:#fff5f5; border-left:4px solid #d32f2f; padding:16px 20px; border-radius:4px; margin:20px 0; }
+    .detail-box p { margin:4px 0; }
+    .footer { text-align:center; color:#999; font-size:12px; padding:20px; border-top:1px solid #eee; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>🦷 Dentis</h1>
+    <p style="margin:8px 0 0">Tu cita ha sido cancelada</p>
+  </div>
+  <div class="body">
+    <p>Hola, <strong th:text="${recipientName}">Paciente</strong>.</p>
+    <p>Te informamos que la siguiente cita ha sido cancelada:</p>
+    <div class="detail-box">
+      <p><strong>Fecha y hora:</strong> <span th:text="${appointmentDate}">—</span></p>
+    </div>
+    <p>Si deseas reagendar tu cita, por favor comunícate con nosotros.</p>
+    <p>Disculpa los inconvenientes.</p>
+  </div>
+  <div class="footer">Dentis — Sistema de Gestión Dental · Este mensaje es automático, no responder.</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Dentis — Sistema de gestión dental integral para Venezuela. Agenda, historia clínica, odontograma, aranceles, presupuestos y pagos en una sola plataforma."/>
+  <meta property="og:title" content="Dentis — Gestión Dental Integral"/>
+  <meta property="og:description" content="Centraliza la agenda clínica, historia digital, presupuestos y pagos de tu clínica dental."/>
+  <meta property="og:type" content="website"/>
+  <title>Dentis — Gestión Dental Integral</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav" role="navigation" aria-label="Navegación principal">
+    <div class="nav-inner container">
+      <a class="nav-logo" href="#inicio" aria-label="Dentis — Inicio">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 2C8 2 5 5 5 8c0 2 1 3.5 2 5l1 5c.3 1.5 1.5 2.5 3 2.5h2c1.5 0 2.7-1 3-2.5l1-5c1-1.5 2-3 2-5 0-3-3-6-7-6z" fill="currentColor" opacity=".9"/>
+          <circle cx="12" cy="8.5" r="1.8" fill="white" opacity=".6"/>
+        </svg>
+        Dentis
+      </a>
+      <ul class="nav-links">
+        <li><a href="#modulos">Módulos</a></li>
+        <li><a href="#asistente-ia">Asistente IA</a></li>
+        <li><a href="#como-funciona">Cómo funciona</a></li>
+        <li><a href="#proximamente">Novedades</a></li>
+        <li><a href="#contacto">Contacto</a></li>
+      </ul>
+      <a class="btn btn-outline" href="/app/login">Iniciar Sesión</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero" id="inicio">
+    <div class="container hero-inner">
+      <div class="hero-text">
+        <span class="badge anim">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          Hecho en Venezuela
+        </span>
+        <h1 class="anim anim-delay-1">Gestión clínica,<br/>administrativa y financiera<br/>en <span class="accent">una sola plataforma</span></h1>
+        <p class="hero-sub anim anim-delay-2">Centraliza agenda, historias clínicas, odontograma, presupuestos y pagos. Dedica más tiempo a tus pacientes y menos a la administración.</p>
+        <div class="hero-ctas anim anim-delay-3">
+          <a class="btn btn-primary btn-lg" href="/app/login">
+            Solicitar Demo Gratis
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+          <a class="btn btn-ghost btn-lg" href="#modulos">Ver Módulos</a>
+        </div>
+      </div>
+      <div class="hero-visual anim anim-delay-2">
+        <div class="mockup-card" role="img" aria-label="Vista previa de la agenda de citas">
+          <div class="mockup-header">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Agenda · Lunes 16 Jun
+          </div>
+          <div class="mockup-row active">
+            <span class="mockup-dot"></span>
+            09:00 — Dra. García · Juan Pérez · Revisión
+          </div>
+          <div class="mockup-row">
+            <span class="mockup-dot" style="background:#94a3b8"></span>
+            10:30 — Dra. García · Ana López · Ortodoncia
+          </div>
+          <div class="mockup-row">
+            <span class="mockup-dot" style="background:#94a3b8"></span>
+            12:00 — Dr. Martínez · Carlos Ruiz · Extracción
+          </div>
+          <div class="mockup-row muted">
+            <span class="mockup-dot" style="background:#cbd5e1"></span>
+            14:00 — Disponible
+          </div>
+          <div class="mockup-divider"></div>
+          <div class="mockup-stat-row">
+            <span class="mockup-icon">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 16.92V21a1 1 0 01-1.09 1A19.91 19.91 0 013 4.09 1 1 0 014 3h4.09a1 1 0 011 .75 13 13 0 00.36 1.48l-1.78 1.78a16 16 0 006.58 6.58l1.78-1.78a13 13 0 001.48.36 1 1 0 01.75 1V21z"/></svg>
+            </span>
+            <span>Recordatorios enviados</span>
+            <strong>3 / 3</strong>
+          </div>
+          <div class="mockup-stat-row">
+            <span class="mockup-icon">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+            </span>
+            <span>Pagos del día</span>
+            <strong>$450.00</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- METRICS STRIP -->
+  <div class="metrics" role="region" aria-label="Métricas del producto">
+    <div class="container">
+      <div class="metrics-grid">
+        <div class="metric-item anim">
+          <span class="metric-value">6+</span>
+          <span class="metric-label">Módulos integrados</span>
+        </div>
+        <div class="metric-item anim anim-delay-1">
+          <span class="metric-value">100%</span>
+          <span class="metric-label">Web · Sin instalación</span>
+        </div>
+        <div class="metric-item anim anim-delay-2">
+          <span class="metric-value">FDI</span>
+          <span class="metric-label">Numeración estándar</span>
+        </div>
+        <div class="metric-item anim anim-delay-3">
+          <span class="metric-value">VE</span>
+          <span class="metric-label">Hecho para Venezuela</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BENEFICIOS -->
+  <section class="benefits" aria-labelledby="benefits-title">
+    <div class="container">
+      <div class="benefits-grid">
+        <div class="benefit-item anim">
+          <div class="benefit-icon" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          </div>
+          <h3>Eficiencia Operativa</h3>
+          <p>Automatiza recordatorios, reduce errores de agendamiento y elimina el papel de tu clínica.</p>
+        </div>
+        <div class="benefit-item anim anim-delay-1">
+          <div class="benefit-icon" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+          </div>
+          <h3>Experiencia del Paciente</h3>
+          <p>Confirmaciones automáticas por email, historia digital accesible y atención más personalizada.</p>
+        </div>
+        <div class="benefit-item anim anim-delay-2">
+          <div class="benefit-icon" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+          <h3>Trazabilidad Total</h3>
+          <p>Cada procedimiento, pago y evolución clínica queda registrado y auditable en tiempo real.</p>
+        </div>
+        <div class="benefit-item anim anim-delay-3">
+          <div class="benefit-icon" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+          </div>
+          <h3>Control Financiero</h3>
+          <p>Presupuestos vinculados a planes de tratamiento, seguimiento de pagos y saldos pendientes.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MÓDULOS -->
+  <section class="modules" id="modulos" aria-labelledby="modules-title">
+    <div class="container">
+      <div class="section-header anim">
+        <span class="section-label">Plataforma completa</span>
+        <h2 id="modules-title">Todo lo que necesita tu clínica</h2>
+        <p>Seis módulos integrados que cubren la operación completa de tu consulta dental.</p>
+      </div>
+      <div class="modules-grid">
+
+        <div class="module-card anim">
+          <div class="module-icon" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <h3>Agenda por Profesional</h3>
+          <p>Vista diaria y semanal por dentista. Bloqueo de horarios, gestión de citas y motivo de consulta.</p>
+          <div class="module-features">
+            <span class="module-feature">Vista diaria y semanal</span>
+            <span class="module-feature">Filtro por profesional</span>
+            <span class="module-feature">Confirmación y cancelación</span>
+          </div>
+        </div>
+
+        <div class="module-card anim anim-delay-1">
+          <div class="module-icon" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          </div>
+          <h3>Historia Clínica Digital</h3>
+          <p>Ficha completa con datos personales, odontograma interactivo, evoluciones clínicas y diagnósticos.</p>
+          <div class="module-features">
+            <span class="module-feature">Odontograma FDI interactivo</span>
+            <span class="module-feature">Dentición permanente, primaria y mixta</span>
+            <span class="module-feature">Evoluciones y diagnósticos CIE-10</span>
+          </div>
+        </div>
+
+        <div class="module-card anim anim-delay-2">
+          <div class="module-icon" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="5"/><path d="M8 14H6a3 3 0 000 6h12a3 3 0 000-6h-2"/><path d="M10 19v-5"/><path d="M14 19v-5"/></svg>
+          </div>
+          <h3>Odontograma por Caras</h3>
+          <p>Marca condiciones por diente y por cara: caries, corona, implante, resto radicular, obturación y más.</p>
+          <div class="module-features">
+            <span class="module-feature">5 caras clicables por diente</span>
+            <span class="module-feature">14 condiciones dentales</span>
+            <span class="module-feature">Múltiples condiciones por diente</span>
+          </div>
+        </div>
+
+        <div class="module-card anim">
+          <div class="module-icon" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+          </div>
+          <h3>Aranceles y Presupuestos</h3>
+          <p>Catálogo de prestaciones por categoría. Genera presupuestos en segundos y vincula al tratamiento.</p>
+          <div class="module-features">
+            <span class="module-feature">Categorías: cirugía, ortodoncia, general…</span>
+            <span class="module-feature">Descuentos por convenio</span>
+            <span class="module-feature">Presupuesto aprobado / borrador</span>
+          </div>
+        </div>
+
+        <div class="module-card anim anim-delay-1">
+          <div class="module-icon" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          </div>
+          <h3>Pagos y Control Financiero</h3>
+          <p>Registra abonos parciales, múltiples métodos de pago (efectivo, transferencia, pago móvil) y visualiza saldos.</p>
+          <div class="module-features">
+            <span class="module-feature">6 métodos de pago</span>
+            <span class="module-feature">Estado: pagado / parcial / pendiente</span>
+            <span class="module-feature">Referencia de factura</span>
+          </div>
+        </div>
+
+        <div class="module-card anim anim-delay-2">
+          <div class="module-icon" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 16.92V21a1 1 0 01-1.09 1A19.91 19.91 0 013 4.09 1 1 0 014 3h4.09a1 1 0 011 .75 13 13 0 00.36 1.48l-1.78 1.78a16 16 0 006.58 6.58l1.78-1.78a13 13 0 001.48.36 1 1 0 01.75 1V21z"/></svg>
+          </div>
+          <h3>Notificaciones Automáticas</h3>
+          <p>Confirmaciones al agendar, recordatorios 24 h antes y avisos de cancelación o reprogramación por correo.</p>
+          <div class="module-features">
+            <span class="module-feature">Confirmación de cita</span>
+            <span class="module-feature">Recordatorio 24 h antes</span>
+            <span class="module-feature">Cancelación y reprogramación</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ASISTENTE IA -->
+  <section class="ia-section" id="asistente-ia" aria-labelledby="ia-title">
+    <div class="container">
+      <div class="ia-inner">
+        <div class="ia-content anim">
+          <span class="section-label">Inteligencia Artificial Clínica</span>
+          <h2 id="ia-title">Consulta con tu asistente dental IA</h2>
+          <p class="ia-desc">Potenciado por Amazon Bedrock y modelos de última generación, el asistente IA de Dentis responde preguntas clínicas basándose en la documentación de tu clínica: protocolos, fichas, radiografías y más.</p>
+          <ul class="ia-features" aria-label="Características del asistente IA">
+            <li>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              RAG semántico sobre documentos clínicos de la clínica
+            </li>
+            <li>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Respuestas contextualizadas con citas a la fuente
+            </li>
+            <li>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Guardia de relevancia — solo temática odontológica
+            </li>
+            <li>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Historial de conversaciones por dentista y sesión
+            </li>
+          </ul>
+          <a class="btn btn-primary" href="/app/login" aria-label="Probar asistente IA">
+            Probar asistente IA
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+        </div>
+        <div class="ia-visual anim anim-delay-1" aria-hidden="true">
+          <div class="ia-chat-demo">
+            <div class="ia-chat-header">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Asistente IA · Odontología
+            </div>
+            <div class="ia-chat-body">
+              <div class="ia-msg ia-msg-user">¿Cuáles son los síntomas de una pulpitis irreversible?</div>
+              <div class="ia-msg ia-msg-assistant">
+                La pulpitis irreversible se caracteriza por dolor espontáneo, prolongado ante estímulos térmicos (especialmente al frío) y que persiste al retirar el estímulo. El dolor suele ser pulsátil e intenso, y puede irradiarse a zonas adyacentes.
+                <span class="ia-citation">Fuente: Protocolo Endodoncia · p.4</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CÓMO FUNCIONA -->
+  <section class="how" id="como-funciona" aria-labelledby="how-title">
+    <div class="container">
+      <div class="section-header anim">
+        <span class="section-label">Onboarding simple</span>
+        <h2 id="how-title">Comienza en 3 pasos</h2>
+      </div>
+      <div class="steps">
+        <div class="step anim">
+          <div class="step-num" aria-hidden="true">1</div>
+          <h3>Configura tu clínica</h3>
+          <p>Crea el perfil de tu clínica y agrega a los profesionales con sus horarios de atención.</p>
+        </div>
+        <div class="step-connector" aria-hidden="true"></div>
+        <div class="step anim anim-delay-1">
+          <div class="step-num" aria-hidden="true">2</div>
+          <h3>Registra tus pacientes</h3>
+          <p>Digitaliza las fichas de cada paciente con historia clínica y odontograma por caras.</p>
+        </div>
+        <div class="step-connector" aria-hidden="true"></div>
+        <div class="step anim anim-delay-2">
+          <div class="step-num" aria-hidden="true">3</div>
+          <h3>Opera con eficiencia</h3>
+          <p>Agenda citas, genera presupuestos, registra pagos y el sistema notifica automáticamente.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIOS -->
+  <section class="testimonials" aria-labelledby="testimonials-title">
+    <div class="container">
+      <div class="section-header anim">
+        <span class="section-label">Lo que dicen nuestros usuarios</span>
+        <h2 id="testimonials-title">Clínicas que ya confían en Dentis</h2>
+      </div>
+      <div class="testimonials-grid">
+        <div class="testimonial-card anim">
+          <div class="testimonial-stars" aria-label="5 de 5 estrellas">★★★★★</div>
+          <p class="testimonial-text">"La agenda por profesional nos ahorró horas de coordinación cada semana. Ahora el equipo trabaja sincronizado y los pacientes reciben sus confirmaciones automáticamente."</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar" aria-hidden="true">MR</div>
+            <div>
+              <div class="testimonial-name">Dra. María Rodríguez</div>
+              <div class="testimonial-role">Clínica Dental Rodríguez · Caracas</div>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card anim anim-delay-1">
+          <div class="testimonial-stars" aria-label="5 de 5 estrellas">★★★★★</div>
+          <p class="testimonial-text">"El control financiero es exactamente lo que necesitábamos. Ver los presupuestos vinculados a los pagos en tiempo real transformó nuestra gestión administrativa."</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar" aria-hidden="true">CG</div>
+            <div>
+              <div class="testimonial-name">Dr. Carlos García</div>
+              <div class="testimonial-role">Centro Odontológico García · Valencia</div>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card anim anim-delay-2">
+          <div class="testimonial-stars" aria-label="5 de 5 estrellas">★★★★★</div>
+          <p class="testimonial-text">"La historia clínica digital con el odontograma interactivo es el diferencial. Ya no buscamos papeles. Toda la información del paciente está disponible en segundos."</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar" aria-hidden="true">LM</div>
+            <div>
+              <div class="testimonial-name">Dra. Laura Martínez</div>
+              <div class="testimonial-role">Clínica Dental Sonrisa · Maracaibo</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRÓXIMAMENTE -->
+  <section class="soon" id="proximamente" aria-labelledby="soon-title">
+    <div class="container">
+      <div class="section-header anim">
+        <span class="section-label">En desarrollo</span>
+        <h2 id="soon-title">Próximas funciones</h2>
+        <p>Nuevas capacidades que llevarán tu clínica al siguiente nivel.</p>
+      </div>
+      <div class="soon-grid">
+        <div class="soon-card anim">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          Dashboard analítico e indicadores
+        </div>
+        <div class="soon-card anim anim-delay-1">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="16 13 12 17 8 13"/><line x1="12" y1="17" x2="12" y2="7"/></svg>
+          Exportar presupuestos e historia a PDF
+        </div>
+        <div class="soon-card anim anim-delay-2">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          Adjuntos de imágenes y radiografías
+        </div>
+        <div class="soon-card anim">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Búsqueda global + notificaciones in-app
+        </div>
+        <div class="soon-card anim anim-delay-1">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          Recordatorios por WhatsApp
+        </div>
+        <div class="soon-card anim anim-delay-2">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+          Firma electrónica y consentimientos
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA FINAL -->
+  <section class="cta-section" aria-labelledby="cta-title">
+    <div class="container cta-inner">
+      <h2 id="cta-title" class="anim">¿Listo para transformar<br/>tu clínica dental?</h2>
+      <p class="anim anim-delay-1">Solicita tu demo gratuita y descubre cómo Dentis puede optimizar<br/>cada aspecto de tu práctica clínica.</p>
+      <div class="anim anim-delay-2">
+        <a class="btn btn-primary btn-xl" href="/app/login">
+          Solicitar Demo Gratis
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+        <p class="cta-note">Sin tarjeta de crédito · Configuración en minutos</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer" id="contacto" role="contentinfo">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <a class="nav-logo" href="#inicio" aria-label="Dentis — Inicio">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 2C8 2 5 5 5 8c0 2 1 3.5 2 5l1 5c.3 1.5 1.5 2.5 3 2.5h2c1.5 0 2.7-1 3-2.5l1-5c1-1.5 2-3 2-5 0-3-3-6-7-6z" fill="currentColor" opacity=".9"/>
+            <circle cx="12" cy="8.5" r="1.8" fill="white" opacity=".6"/>
+          </svg>
+          Dentis
+        </a>
+        <p>Sistema de Gestión Dental Integral.<br/>Diseñado para clínicas venezolanas.</p>
+        <span class="footer-badge">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C8 2 5 5 5 8c0 2 1 3.5 2 5l1 5c.3 1.5 1.5 2.5 3 2.5h2c1.5 0 2.7-1 3-2.5l1-5c1-1.5 2-3 2-5 0-3-3-6-7-6z"/></svg>
+          Hecho en Venezuela
+        </span>
+      </div>
+      <div class="footer-links">
+        <h4>Producto</h4>
+        <a href="#modulos">Módulos</a>
+        <a href="#como-funciona">Cómo funciona</a>
+        <a href="#proximamente">Próximamente</a>
+      </div>
+      <div class="footer-links">
+        <h4>Acceso</h4>
+        <a href="/app/login">Iniciar Sesión</a>
+        <a href="/app/login">Solicitar Demo</a>
+      </div>
+      <div class="footer-links">
+        <h4>Contacto</h4>
+        <a href="mailto:contacto@dentis.com.ve">contacto@dentis.com.ve</a>
+        <a href="#inicio">Volver al inicio</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="container footer-bottom-inner">
+        <p>© 2026 Dentis. Todos los derechos reservados.</p>
+        <a href="/app/login">Iniciar Sesión →</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Smooth scroll
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+
+    // Nav shadow on scroll
+    const nav = document.querySelector('.nav');
+    window.addEventListener('scroll', () => {
+      nav.classList.toggle('nav-scrolled', window.scrollY > 20);
+    }, { passive: true });
+
+    // Animate on scroll (IntersectionObserver)
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+    document.querySelectorAll('.anim').forEach(el => observer.observe(el));
+
+    // Rewrite login links to use same host with port 8081 (dev: landing:80 + backoffice:8081)
+    (function() {
+      var loginUrl = location.protocol + '//' + location.hostname + ':8081/login';
+      document.querySelectorAll('a[href="/app/login"]').forEach(function(a) {
+        a.href = loginUrl;
+      });
+    })();
+  </script>
+</body>
+</html>

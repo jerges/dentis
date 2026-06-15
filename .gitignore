@@ -38,3 +38,14 @@ id_ed25519
 id_ed25519.pub
 id_ecdsa
 id_ecdsa.pub
+
+# Claude Code local settings (project instructions in CLAUDE.md are tracked, but not local settings)
+.claude/settings.json
+.claude/settings.local.json
+
+# Python cache (Lambda functions)
+**/__pycache__/
+**/*.pyc
+
+# Lambda deployment packages
+**/*.zip

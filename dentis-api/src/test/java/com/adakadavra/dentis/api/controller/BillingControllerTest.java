@@ -1,5 +1,6 @@
 package com.adakadavra.dentis.api.controller;
 
+import com.adakadavra.dentis.api.security.service.TenantSecurityService;
 import com.adakadavra.dentis.billing.domain.model.Budget;
 import com.adakadavra.dentis.billing.domain.model.BudgetStatus;
 import com.adakadavra.dentis.billing.domain.model.Payment;
@@ -10,6 +11,8 @@ import com.adakadavra.dentis.billing.domain.service.BudgetService;
 import com.adakadavra.dentis.billing.domain.service.PaymentService;
 import com.adakadavra.dentis.billing.domain.service.TariffService;
 import com.adakadavra.dentis.common.response.ApiResponse;
+import com.adakadavra.dentis.patient.application.usecase.PatientUseCase;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -28,11 +31,12 @@ import org.springframework.http.ResponseEntity;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("BillingController")
@@ -47,8 +51,20 @@ class BillingControllerTest {
     @Mock
     private TariffService tariffService;
 
+    @Mock
+    private PatientUseCase patientUseCase;
+
+    @Mock
+    private TenantSecurityService tenantSecurity;
+
     @InjectMocks
     private BillingController billingController;
+
+    @BeforeEach
+    void stubTenant() {
+        // lenient: not all tests exercise tenant checks (e.g. tariff endpoints have no clinic scope)
+        lenient().when(tenantSecurity.currentClinicId()).thenReturn(Optional.empty());
+    }
 
     @Test
     @DisplayName("should be returned with OK status when listing tariffs")

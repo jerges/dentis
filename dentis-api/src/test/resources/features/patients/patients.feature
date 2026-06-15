@@ -45,3 +45,7 @@ Feature: Patient Controller integration
     When patient api fetches an unknown patient
     Then patient response status should be 404
 
+  Scenario: Update non-existent patient returns 404
+    When patient api updates a non-existent patient
+    Then patient response status should be 404
+

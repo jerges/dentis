@@ -48,5 +48,10 @@ public class PaymentRepositoryAdapter implements PaymentRepository {
     public BigDecimal sumPaymentsByBudgetId(UUID budgetId) {
         return jpaRepository.sumPaymentsByBudgetId(budgetId);
     }
+
+    @Override
+    public BigDecimal sumAllPayments() {
+        return jpaRepository.sumAllPayments();
+    }
 }
 

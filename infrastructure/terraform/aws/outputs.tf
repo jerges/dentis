@@ -34,6 +34,21 @@ output "ecs_service_name" {
   value       = module.ecs.service_name
 }
 
+output "landing_url" {
+  description = "Public URL for the landing page"
+  value       = module.landing.landing_url
+}
+
+output "landing_bucket" {
+  description = "S3 bucket name for the landing static files"
+  value       = module.landing.bucket_name
+}
+
+output "landing_cloudfront_id" {
+  description = "CloudFront distribution ID for cache invalidation"
+  value       = module.landing.cloudfront_distribution_id
+}
+
 output "docker_push_commands" {
   description = "Commands to build and push the Docker image"
   value       = <<-EOT

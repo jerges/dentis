@@ -94,16 +94,16 @@ import { AuthService } from '../../../core/services/auth.service';
       gap: 48px;
       padding: 32px;
       background:
-        radial-gradient(circle at top left, rgba(79, 70, 229, 0.18), transparent 28%),
-        radial-gradient(circle at bottom right, rgba(6, 182, 212, 0.18), transparent 24%),
-        linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+        radial-gradient(circle at top left, rgba(13, 148, 136, 0.20), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.16), transparent 24%),
+        linear-gradient(160deg, #04232a 0%, #0d4a50 45%, #0e3a55 100%);
     }
     .login-hero { color: white; padding-right: 12px; }
     .hero-badge {
       width: 64px; height: 64px; border-radius: 18px;
       display: flex; align-items: center; justify-content: center;
-      background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
-      box-shadow: 0 16px 40px rgba(79, 70, 229, .35);
+      background: linear-gradient(135deg, #0d9488 0%, #0ea5e9 100%);
+      box-shadow: 0 16px 40px rgba(13, 148, 136, .40);
       margin-bottom: 20px;
     }
     .hero-badge mat-icon { font-size: 32px; width: 32px; height: 32px; }
@@ -114,7 +114,7 @@ import { AuthService } from '../../../core/services/auth.service';
       width: 100%; padding: 8px 0 8px;
       display: flex; flex-direction: column; gap: 6px;
     }
-    .eyebrow { color: #4f46e5; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .eyebrow { color: var(--dentis-primary); font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
     h2 { margin: 0; font-size: 28px; font-weight: 800; color: #0f172a; }
     .login-header p { margin: 0; color: #64748b; font-size: 14px; }
     form { display: flex; flex-direction: column; gap: 14px; margin-top: 20px; }

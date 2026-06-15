@@ -45,6 +45,17 @@ public interface AppointmentJpaRepository extends JpaRepository<AppointmentEntit
             @Param("excludeId") UUID excludeId
     );
 
+    @Query("""
+            SELECT a FROM AppointmentEntity a
+            WHERE a.status IN ('SCHEDULED', 'CONFIRMED')
+            AND a.startDateTime >= :from AND a.startDateTime <= :to
+            ORDER BY a.startDateTime ASC
+            """)
+    List<AppointmentEntity> findScheduledBetween(
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to
+    );
+
     @Modifying
     @Query("UPDATE AppointmentEntity a SET a.status = 'CANCELLED' WHERE a.id = :id")
     void cancelById(@Param("id") UUID id);

@@ -18,4 +18,6 @@ public interface PaymentRepository {
     List<Payment> findByPatientId(UUID patientId);
 
     BigDecimal sumPaymentsByBudgetId(UUID budgetId);
+
+    BigDecimal sumAllPayments();
 }

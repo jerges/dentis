@@ -2,9 +2,12 @@ package com.adakadavra.dentis.clinical.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 import org.hibernate.annotations.UuidGenerator;
 import org.springframework.data.domain.Persistable;
 
+import com.adakadavra.dentis.clinical.domain.model.DentitionType;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +30,10 @@ public class ClinicalRecordEntity implements Persistable<UUID> {
     @Column(name = "patient_id", nullable = false, unique = true)
     private UUID patientId;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "dentition_type", length = 20)
+    private DentitionType dentitionType;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -34,18 +41,22 @@ public class ClinicalRecordEntity implements Persistable<UUID> {
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "clinicalRecord", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Fetch(FetchMode.SUBSELECT)
     @Builder.Default
     private List<OdontogramToothEntity> odontogram = new ArrayList<>();
 
     @OneToMany(mappedBy = "clinicalRecord", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Fetch(FetchMode.SUBSELECT)
     @Builder.Default
     private List<ClinicalEvolutionEntity> evolutions = new ArrayList<>();
 
     @OneToMany(mappedBy = "clinicalRecord", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Fetch(FetchMode.SUBSELECT)
     @Builder.Default
     private List<DiagnosisEntity> diagnoses = new ArrayList<>();
 
     @OneToMany(mappedBy = "clinicalRecord", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Fetch(FetchMode.SUBSELECT)
     @Builder.Default
     private List<TreatmentPlanEntity> treatmentPlans = new ArrayList<>();
 

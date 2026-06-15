@@ -19,6 +19,7 @@ public class ClinicalRecordEntityMapper {
         ClinicalRecordEntity entity = ClinicalRecordEntity.builder()
                 .id(record.getId())
                 .patientId(record.getPatientId())
+                .dentitionType(record.getDentitionType())
                 .createdAt(record.getCreatedAt())
                 .updatedAt(record.getUpdatedAt())
                 .odontogram(new ArrayList<>())
@@ -78,6 +79,7 @@ public class ClinicalRecordEntityMapper {
         return ClinicalRecord.builder()
                 .id(entity.getId())
                 .patientId(entity.getPatientId())
+                .dentitionType(entity.getDentitionType())
                 .odontogram(odontogram)
                 .evolutions(evolutions)
                 .diagnoses(diagnoses)
@@ -96,8 +98,10 @@ public class ClinicalRecordEntityMapper {
                 .condition(tooth.getCondition())
                 .affectedSurfaces(serializeSurfaces(tooth.getAffectedSurfaces()))
                 .surfaceConditions(serializeSurfaceConditions(tooth.getSurfaceConditions()))
-                .spaceClosureStatus(tooth.getSpaceClosureStatus())
+                .spaceStatus(tooth.getSpaceStatus())
                 .notes(tooth.getNotes())
+                .rootFindings(serializeRootFindings(tooth.getRootFindings()))
+                .rootNotes(tooth.getRootNotes())
                 .build();
     }
 
@@ -109,8 +113,10 @@ public class ClinicalRecordEntityMapper {
                 .condition(entity.getCondition())
                 .affectedSurfaces(deserializeSurfaces(entity.getAffectedSurfaces()))
                 .surfaceConditions(deserializeSurfaceConditions(entity.getSurfaceConditions()))
-                .spaceClosureStatus(entity.getSpaceClosureStatus())
+                .spaceStatus(entity.getSpaceStatus())
                 .notes(entity.getNotes())
+                .rootFindings(deserializeRootFindings(entity.getRootFindings()))
+                .rootNotes(entity.getRootNotes())
                 .build();
     }
 
@@ -146,6 +152,7 @@ public class ClinicalRecordEntityMapper {
                 .description(diagnosis.getDescription())
                 .diagnosedAt(diagnosis.getDiagnosedAt())
                 .dentistId(diagnosis.getDentistId())
+                .toothNumber(diagnosis.getToothNumber())
                 .build();
     }
 
@@ -157,6 +164,7 @@ public class ClinicalRecordEntityMapper {
                 .description(entity.getDescription())
                 .diagnosedAt(entity.getDiagnosedAt())
                 .dentistId(entity.getDentistId())
+                .toothNumber(entity.getToothNumber())
                 .build();
     }
 
@@ -265,5 +273,22 @@ public class ClinicalRecordEntityMapper {
         }
         return result;
     }
+<<<<<<< HEAD
+=======
+
+    private String serializeRootFindings(Set<RootFinding> findings) {
+        if (findings == null || findings.isEmpty()) return null;
+        return findings.stream().map(Enum::name).sorted().collect(Collectors.joining(","));
+    }
+
+    private Set<RootFinding> deserializeRootFindings(String serialized) {
+        if (serialized == null || serialized.isBlank()) return Collections.emptySet();
+        Set<RootFinding> result = new LinkedHashSet<>();
+        for (String token : serialized.split(",")) {
+            result.add(RootFinding.valueOf(token.trim()));
+        }
+        return result;
+    }
+>>>>>>> main
 }
 

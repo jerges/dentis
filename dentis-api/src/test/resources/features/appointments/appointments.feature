@@ -52,3 +52,11 @@ Feature: Appointment Controller integration
     When appointment api schedules appointment with end before start
     Then appointment response status should be 422
 
+  Scenario: Confirm non-existent appointment returns 404
+    When appointment api confirms a non-existent appointment
+    Then appointment response status should be 404
+
+  Scenario: Cancel non-existent appointment returns 404
+    When appointment api cancels a non-existent appointment
+    Then appointment cancel status should be 404
+

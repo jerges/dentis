@@ -5,11 +5,16 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '../../../core/services/auth.service';
 import { ThemeService } from '../../../core/services/theme.service';
+import { GlobalSearchComponent } from '../global-search/global-search.component';
+import { NotificationCenterComponent } from '../notification-center/notification-center.component';
 
 @Component({
   selector: 'app-shell-topbar',
   standalone: true,
-  imports: [MatToolbarModule, MatButtonModule, MatIconModule, MatTooltipModule],
+  imports: [
+    MatToolbarModule, MatButtonModule, MatIconModule, MatTooltipModule,
+    GlobalSearchComponent, NotificationCenterComponent,
+  ],
   template: `
     <mat-toolbar color="primary" class="app-toolbar">
       <button mat-icon-button (click)="menuClick.emit()">
@@ -23,6 +28,19 @@ import { ThemeService } from '../../../core/services/theme.service';
 
       <span class="spacer"></span>
 
+      <!-- Búsqueda global -->
+      <button
+        mat-stroked-button
+        class="search-btn"
+        (click)="searchComp.openSearch()"
+        matTooltip="Buscar (⌘K / Ctrl+K)"
+        aria-label="Abrir búsqueda global">
+        <mat-icon>search</mat-icon>
+        <span class="search-btn-label">Buscar…</span>
+        <kbd class="search-kbd">⌘K</kbd>
+      </button>
+
+      <!-- Tema -->
       <button
         mat-icon-button
         class="theme-toggle"
@@ -31,8 +49,14 @@ import { ThemeService } from '../../../core/services/theme.service';
         <mat-icon>{{ theme.theme() === 'light' ? 'dark_mode' : 'light_mode' }}</mat-icon>
       </button>
 
+      <!-- Notificaciones -->
+      <app-notification-center />
+
       <div class="toolbar-role">{{ auth.currentUser()?.role }}</div>
     </mat-toolbar>
+
+    <!-- Command palette (montado fuera del toolbar para z-index) -->
+    <app-global-search #searchComp />
   `,
   styles: [`
     .app-toolbar {
@@ -43,6 +67,7 @@ import { ThemeService } from '../../../core/services/theme.service';
       background: rgba(255,255,255,.82) !important;
       backdrop-filter: blur(14px);
       box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      gap: 4px;
     }
     :host-context(body.theme-dark) .app-toolbar {
       background: rgba(15, 23, 42, 0.7) !important;
@@ -56,22 +81,49 @@ import { ThemeService } from '../../../core/services/theme.service';
     .toolbar-title { font-size: 15px; font-weight: 700; line-height: 1.1; }
     .toolbar-subtitle { font-size: 12px; color: var(--dentis-text-muted); }
     .spacer { flex: 1 1 auto; }
+
+    .search-btn {
+      height: 36px;
+      border-radius: 10px !important;
+      border-color: var(--dentis-border) !important;
+      color: var(--dentis-text-muted) !important;
+      display: flex; align-items: center; gap: 6px;
+      padding: 0 12px !important;
+      margin-right: 4px;
+      background: var(--dentis-surface-alt) !important;
+      transition: border-color .15s, background .15s;
+    }
+    .search-btn:hover {
+      border-color: var(--dentis-primary) !important;
+      background: rgba(13,148,136,.06) !important;
+    }
+    .search-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .search-btn-label { font-size: 13px; font-weight: 500; }
+    .search-kbd {
+      font-size: 11px; padding: 2px 6px; border-radius: 5px;
+      background: var(--dentis-surface); border: 1px solid var(--dentis-border);
+      font-family: var(--dentis-font-ui); margin-left: 4px; opacity: .7;
+    }
+    @media (max-width: 600px) {
+      .search-btn-label, .search-kbd { display: none; }
+    }
+
     .toolbar-role {
       padding: 6px 12px;
       border-radius: 999px;
       font-size: 12px;
       font-weight: 700;
       letter-spacing: .04em;
-      color: #4338ca;
-      background: rgba(79, 70, 229, 0.08);
+      color: var(--dentis-primary);
+      background: rgba(13, 148, 136, 0.10);
       text-transform: uppercase;
+      margin-left: 4px;
     }
     :host-context(body.theme-dark) .toolbar-role {
-      color: #c7d2fe;
-      background: rgba(129, 140, 248, 0.12);
+      color: #2dd4bf;
+      background: rgba(45, 212, 191, 0.12);
     }
     .theme-toggle {
-      margin-right: 8px;
       color: var(--dentis-text-muted);
     }
   `]
@@ -84,4 +136,3 @@ export class ShellTopbarComponent {
     public theme: ThemeService
   ) {}
 }
-

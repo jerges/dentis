@@ -32,18 +32,18 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 public class CucumberSpringConfig {
 
     private static final List<String> MIGRATION_SCRIPTS = List.of(
-            "db/migration/V1__create_patients_table.sql",
-            "db/migration/V2__create_appointments_table.sql",
-            "db/migration/V3__create_clinical_tables.sql",
-            "db/migration/V4__create_billing_tables.sql",
-            "db/migration/V5__create_users_table.sql",
-            "db/migration/V6__insert_dev_superuser.sql",
-            "db/migration/V7__add_clinic_module.sql"
+            "db/changelog/changes/001-baseline.sql",
+            "db/changelog/changes/002-clinical-enhancements.sql",
+            "db/changelog/changes/004-odontogram-root-and-tooth-dx.sql",
+            "db/changelog/changes/005-clinical-attachments.sql",
+            "db/changelog/changes/006-ia-vector.sql",
+            "db/changelog/changes/007-ia-spring-ai-vector.sql"
     );
 
+    // pgvector/pgvector includes the vector extension required by migration 006
     @SuppressWarnings("resource")
     private static final PostgreSQLContainer<?> POSTGRES =
-            new PostgreSQLContainer<>("postgres:16-alpine")
+            new PostgreSQLContainer<>("pgvector/pgvector:pg16")
                     .withDatabaseName("dentis_test")
                     .withUsername("dentis")
                     .withPassword("dentis");

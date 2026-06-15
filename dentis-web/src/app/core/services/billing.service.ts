@@ -30,6 +30,12 @@ export class BillingService {
     return this.http.patch<ApiResponse<Budget>>(`${this.baseUrl}/budgets/${id}/approve`, {}).pipe(map((r) => r.data));
   }
 
+  markItemPerformed(budgetId: string, itemId: string): Observable<Budget> {
+    return this.http.patch<ApiResponse<Budget>>(
+      `${this.baseUrl}/budgets/${budgetId}/items/${itemId}/performed`, {}
+    ).pipe(map((r) => r.data));
+  }
+
   getBudgetSummary(id: string): Observable<BudgetSummary> {
     return this.http.get<ApiResponse<BudgetSummary>>(`${this.baseUrl}/budgets/${id}/summary`).pipe(map((r) => r.data));
   }

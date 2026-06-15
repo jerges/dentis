@@ -1,14 +1,15 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { forkJoin } from 'rxjs';
-import { PatientService } from '../../core/services/patient.service';
-import { AppointmentService } from '../../core/services/appointment.service';
+import { map } from 'rxjs';
+import { environment } from '@environments/environment';
+import { ApiResponse } from '../../core/models/api.model';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 
 interface StatCard {
@@ -17,6 +18,13 @@ interface StatCard {
   icon: string;
   color: string;
   route: string;
+}
+
+interface DashboardStats {
+  totalPatients: number;
+  todayAppointments: number;
+  weekAppointments: number;
+  totalRevenue: number;
 }
 
 @Component({
@@ -89,7 +97,7 @@ interface StatCard {
       letter-spacing: .08em;
     }
     .stat-card { cursor: pointer; transition: transform .2s, box-shadow .2s, border-color .2s; }
-    .stat-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(15,23,42,.10); border-color: rgba(79,70,229,.22); }
+    .stat-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(13,148,136,.14); border-color: rgba(13,148,136,.28); }
     .stat-body { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; }
     .stat-info { display: flex; flex-direction: column; gap: 4px; }
     .stat-label { font-size: 13px; color: #64748b; font-weight: 600; }
@@ -104,21 +112,26 @@ interface StatCard {
 })
 export class DashboardComponent implements OnInit {
   statCards: StatCard[] = [
-    { label: 'Total Pacientes', value: '—', icon: 'people',          color: '#3f51b5', route: '/patients' },
-    { label: 'Citas Hoy',       value: '—', icon: 'calendar_today',  color: '#009688', route: '/scheduling' },
-    { label: 'Presupuestos',    value: '—', icon: 'description',     color: '#ff9800', route: '/billing/budgets' },
-    { label: 'Pagos Pendientes',value: '—', icon: 'account_balance',  color: '#e91e63', route: '/billing/payments' },
+    { label: 'Total Pacientes',   value: '—', icon: 'people',          color: '#0d9488', route: '/patients' },
+    { label: 'Citas Hoy',         value: '—', icon: 'calendar_today',  color: '#009688', route: '/scheduling' },
+    { label: 'Citas esta Semana', value: '—', icon: 'date_range',      color: '#ff9800', route: '/scheduling' },
+    { label: 'Ingresos Totales',  value: '—', icon: 'payments',        color: '#4caf50', route: '/billing/payments' },
   ];
 
-  constructor(
-    private patientService: PatientService,
-    private appointmentService: AppointmentService
-  ) {}
+  constructor(private http: HttpClient) {}
 
   ngOnInit(): void {
-    this.patientService.getAll(0, 1).subscribe(
-      (page) => (this.statCards[0].value = page.totalElements)
-    );
+    this.http.get<ApiResponse<DashboardStats>>(`${environment.apiUrl}/api/v1/dashboard/stats`)
+      .pipe(map((r) => r.data))
+      .subscribe({
+        next: (stats) => {
+          this.statCards[0].value = stats.totalPatients;
+          this.statCards[1].value = stats.todayAppointments;
+          this.statCards[2].value = stats.weekAppointments;
+          this.statCards[3].value = `$${Number(stats.totalRevenue ?? 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`;
+        },
+        error: () => {}
+      });
   }
 }
 

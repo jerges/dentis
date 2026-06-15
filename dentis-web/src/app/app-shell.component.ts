@@ -84,7 +84,12 @@ export class AppShellComponent {
 
   readonly visibleNavItems = computed(() => {
     const role = this.auth.getRole();
-    return this.navItems.filter((item) => !item.roles || !!role && item.roles.includes(role));
+    const staffType = this.auth.currentUser()?.staffType;
+    return this.navItems.filter((item) => {
+      const roleMatch = !item.roles || (!!role && item.roles.includes(role));
+      const staffMatch = !item.staffTypes || (!!staffType && item.staffTypes.includes(staffType));
+      return !item.roles && !item.staffTypes ? true : roleMatch || staffMatch;
+    });
   });
 
   constructor(public auth: AuthService) {

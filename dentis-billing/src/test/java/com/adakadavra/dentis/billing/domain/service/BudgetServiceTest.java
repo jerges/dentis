@@ -5,6 +5,7 @@ import com.adakadavra.dentis.billing.domain.repository.BudgetRepository;
 import com.adakadavra.dentis.billing.domain.repository.PaymentRepository;
 import com.adakadavra.dentis.billing.domain.repository.TariffRepository;
 import com.adakadavra.dentis.common.exception.BusinessRuleException;
+import com.adakadavra.dentis.common.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -30,6 +32,7 @@ class BudgetServiceTest {
     @Mock private BudgetRepository budgetRepository;
     @Mock private PaymentRepository paymentRepository;
     @Mock private TariffRepository tariffRepository;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private BudgetService budgetService;
@@ -129,6 +132,45 @@ class BudgetServiceTest {
             BudgetSummary summary = budgetService.getBudgetSummary(budgetId);
 
             assertThat(summary.getStatus()).isEqualTo(PaymentSummaryStatus.PENDING);
+        }
+    }
+
+    @Nested
+    @DisplayName("markItemAsPerformed")
+    class MarkItemAsPerformed {
+
+        @Test
+        @DisplayName("should mark item as performed and set performedAt")
+        void shouldMarkItemAsPerformed() {
+            UUID itemId = sampleBudget.getItems().get(0).getId();
+            when(budgetRepository.findById(sampleBudget.getId())).thenReturn(Optional.of(sampleBudget));
+            when(budgetRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            Budget result = budgetService.markItemAsPerformed(sampleBudget.getId(), itemId);
+
+            assertThat(result.getItems()).hasSize(1);
+            assertThat(result.getItems().get(0).getPerformed()).isTrue();
+            assertThat(result.getItems().get(0).getPerformedAt()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should throw when item is not in budget")
+        void shouldThrowWhenItemNotFound() {
+            UUID unknownItemId = UUID.randomUUID();
+            when(budgetRepository.findById(sampleBudget.getId())).thenReturn(Optional.of(sampleBudget));
+
+            assertThatThrownBy(() -> budgetService.markItemAsPerformed(sampleBudget.getId(), unknownItemId))
+                    .isInstanceOf(ResourceNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("should throw when budget does not exist")
+        void shouldThrowWhenBudgetNotFound() {
+            UUID unknownBudgetId = UUID.randomUUID();
+            when(budgetRepository.findById(unknownBudgetId)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> budgetService.markItemAsPerformed(unknownBudgetId, UUID.randomUUID()))
+                    .isInstanceOf(ResourceNotFoundException.class);
         }
     }
 }

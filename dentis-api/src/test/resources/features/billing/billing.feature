@@ -78,3 +78,7 @@ Feature: Billing Controller - Budget and Payment CRUD
     When I list payments for the patient
     Then the response status should be 200
     And the payment list contains 1 item
+
+  Scenario: Approve non-existent budget returns 404
+    When I approve a non-existent budget
+    Then the response status should be 404

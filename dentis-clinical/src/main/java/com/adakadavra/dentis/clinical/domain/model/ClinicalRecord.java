@@ -17,6 +17,7 @@ public class ClinicalRecord {
 
     private final UUID id;
     private final UUID patientId;
+    private final DentitionType dentitionType;
     private final List<OdontogramTooth> odontogram;
     private final List<ClinicalEvolution> evolutions;
     private final List<Diagnosis> diagnoses;

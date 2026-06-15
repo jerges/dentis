@@ -29,10 +29,9 @@ public class OdontogramTooth {
     private final Set<ToothSurface> affectedSurfaces;
     /** Fine-grained per-surface conditions (overrides affectedSurfaces when present). */
     private final Map<ToothSurface, ToothCondition> surfaceConditions;
-    /**
-     * Space-closure triangle indicator shown when condition is ABSENT.
-     * Null for non-absent teeth.
-     */
-    private final SpaceClosureStatus spaceClosureStatus;
+    /** Space-closure triangle indicator shown when condition is ABSENT. Null for non-absent teeth. */
+    private final SpaceStatus spaceStatus;
     private final String notes;
+    private final Set<RootFinding> rootFindings;
+    private final String rootNotes;
 }

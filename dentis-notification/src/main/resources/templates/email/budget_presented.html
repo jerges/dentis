@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Presupuesto de Tratamiento — Dentis</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f5f5f5; margin:0; padding:0; }
+    .container { max-width:600px; margin:40px auto; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.1); }
+    .header { background:#388e3c; color:#fff; padding:32px 24px; text-align:center; }
+    .header h1 { margin:0; font-size:24px; }
+    .body { padding:32px 24px; color:#333; }
+    .body p { line-height:1.6; }
+    .footer { text-align:center; color:#999; font-size:12px; padding:20px; border-top:1px solid #eee; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>🦷 Dentis</h1>
+    <p style="margin:8px 0 0">Tu presupuesto de tratamiento está disponible</p>
+  </div>
+  <div class="body">
+    <p>Hola, <strong th:text="${recipientName}">Paciente</strong>.</p>
+    <p>Te comunicamos que tu presupuesto de tratamiento dental ha sido preparado y está listo para tu revisión.</p>
+    <p>Por favor, comunícate con nosotros para conocer los detalles y confirmar el plan de tratamiento.</p>
+    <p>Estamos a tu disposición para cualquier consulta.</p>
+  </div>
+  <div class="footer">Dentis — Sistema de Gestión Dental · Este mensaje es automático, no responder.</div>
+</div>
+</body>
+</html>

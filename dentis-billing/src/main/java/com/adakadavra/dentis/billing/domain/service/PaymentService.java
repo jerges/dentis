@@ -1,11 +1,13 @@
 package com.adakadavra.dentis.billing.domain.service;
 
+import com.adakadavra.dentis.billing.domain.event.PaymentReceivedEvent;
 import com.adakadavra.dentis.billing.domain.model.*;
 import com.adakadavra.dentis.billing.domain.repository.BudgetRepository;
 import com.adakadavra.dentis.billing.domain.repository.PaymentRepository;
 import com.adakadavra.dentis.common.exception.BusinessRuleException;
 import com.adakadavra.dentis.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,7 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final BudgetRepository budgetRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public Payment registerPayment(Payment payment) {
@@ -43,7 +46,9 @@ public class PaymentService {
                 .paidAt(LocalDateTime.now())
                 .build();
 
-        return paymentRepository.save(withTimestamp);
+        Payment saved = paymentRepository.save(withTimestamp);
+        eventPublisher.publishEvent(new PaymentReceivedEvent(this, saved));
+        return saved;
     }
 
     public List<Payment> findByBudgetId(UUID budgetId) {

@@ -15,5 +15,7 @@ public enum ToothCondition {
     /** Defective filling — existing restoration is compromised or failed. */
     DEFECTIVE_FILLING,
     ERUPTING,
-    IMPACTED
+    IMPACTED,
+    ROOT_REMNANT,
+    DEFECTIVE_FILLING
 }

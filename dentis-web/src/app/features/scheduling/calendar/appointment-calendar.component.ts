@@ -15,7 +15,7 @@ import { AppointmentService } from '../../../core/services/appointment.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ClinicService } from '../../../core/services/clinic.service';
 import { Clinic, ClinicUser } from '../../../core/models/clinic.model';
-import { EntityAutocompleteComponent } from '../../../shared/components/entity-autocomplete/entity-autocomplete.component';
+import { AutocompleteOption, EntityAutocompleteComponent } from '../../../shared/components/entity-autocomplete/entity-autocomplete.component';
 
 @Component({
   selector: 'app-appointment-calendar',
@@ -111,37 +111,35 @@ import { EntityAutocompleteComponent } from '../../../shared/components/entity-a
   styles: [`
     .calendar-header { margin-bottom: 24px; gap: 12px; flex-wrap: wrap; }
     .dentist-selector { min-width: 280px; max-width: 360px; }
-    .page-title { margin: 0 0 4px; font-size: 24px; font-weight: 700; color: #1a237e; }
-    .page-subtitle { margin: 0; color: #666; font-size: 13px; }
     .calendar-card { margin-bottom: 24px; }
     .week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; min-height: 300px; }
-    .day-column { border-right: 1px solid #e0e0e0; padding: 4px; }
-    .day-column.today { background: rgba(63,81,181,.05); }
+    .day-column { border-right: 1px solid var(--dentis-border); padding: 4px; }
+    .day-column.today { background: rgba(13,148,136,.06); }
     .day-header { text-align: center; padding: 8px 4px; }
-    .day-name { display: block; font-size: 11px; color: #888; text-transform: uppercase; }
+    .day-name { display: block; font-size: 11px; color: var(--dentis-text-muted); text-transform: uppercase; }
     .day-num { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; font-weight: 600; font-size: 15px; border-radius: 50%; }
-    .today-badge { background: #3f51b5; color: white; }
+    .today-badge { background: var(--dentis-primary); color: white; }
     .day-appointments { display: flex; flex-direction: column; gap: 4px; }
-    .apt-block { padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+    .apt-block { padding: 4px 6px; border-radius: 6px; cursor: pointer; font-size: 11px; }
     .apt-block:hover { opacity: .85; }
-    .apt-scheduled { background: #fff3e0; border-left: 3px solid #ff9800; }
-    .apt-confirmed { background: #e8f5e9; border-left: 3px solid #4caf50; }
-    .apt-completed { background: #e3f2fd; border-left: 3px solid #2196f3; }
-    .apt-cancelled { background: #fce4ec; border-left: 3px solid #e91e63; }
-    .apt-in_progress { background: #ede7f6; border-left: 3px solid #673ab7; }
-    .apt-no_show { background: #eceff1; border-left: 3px solid #607d8b; }
+    .apt-scheduled { background: rgba(245,158,11,.12); border-left: 3px solid #f59e0b; }
+    .apt-confirmed { background: rgba(22,163,74,.10); border-left: 3px solid #16a34a; }
+    .apt-completed { background: rgba(14,165,233,.10); border-left: 3px solid #0ea5e9; }
+    .apt-cancelled { background: rgba(220,38,38,.10); border-left: 3px solid #dc2626; }
+    .apt-in_progress { background: rgba(13,148,136,.10); border-left: 3px solid #0d9488; }
+    .apt-no_show { background: rgba(100,116,139,.10); border-left: 3px solid #64748b; }
     .apt-time { display: block; font-weight: 600; }
     .apt-patient { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .list-card mat-card-content { padding-top: 8px; }
-    .apt-row { padding: 12px 8px; border-bottom: 1px solid #f5f5f5; cursor: pointer; gap: 16px; }
-    .apt-row:hover { background: #fafafa; }
+    .apt-row { padding: 12px 8px; border-bottom: 1px solid var(--dentis-border); cursor: pointer; gap: 16px; }
+    .apt-row:hover { background: rgba(13,148,136,.04); }
     .apt-datetime { display: flex; flex-direction: column; align-items: center; min-width: 48px; }
     .date { font-weight: 600; font-size: 14px; }
-    .time { font-size: 12px; color: #888; }
+    .time { font-size: 12px; color: var(--dentis-text-muted); }
     .apt-info { display: flex; flex-direction: column; }
-    .patient { font-weight: 500; }
-    .reason { font-size: 12px; color: #666; }
-    .empty-msg { text-align: center; color: #999; padding: 40px; }
+    .patient { font-weight: 600; }
+    .reason { font-size: 12px; color: var(--dentis-text-muted); }
+    .empty-msg { text-align: center; color: var(--dentis-text-muted); padding: 40px; }
   `]
 })
 export class AppointmentCalendarComponent implements OnInit {
@@ -221,18 +219,16 @@ export class AppointmentCalendarComponent implements OnInit {
       .subscribe({ next: (list) => (this.appointments = list), error: () => (this.appointments = []) });
   }
 
-  displayDentist = (dentist: ClinicUser | string | null): string => {
-    if (!dentist || typeof dentist === 'string') {
-      return dentist ?? '';
-    }
-
+  displayDentist = (value: AutocompleteOption | null): string => {
+    if (!value || typeof value === 'string') return value ?? '';
+    const dentist = value as ClinicUser;
     return `${dentist.fullName} · ${dentist.username}`;
   };
 
-  trackDentist = (dentist: ClinicUser): string => dentist.id;
+  trackDentist = (value: AutocompleteOption): string => (value as ClinicUser).id;
 
-  onDentistSelected(dentist: ClinicUser): void {
-    this.selectDentist(dentist, true);
+  onDentistSelected(value: AutocompleteOption): void {
+    this.selectDentist(value as ClinicUser, true);
   }
 
   searchTerm(value: string | ClinicUser | null): string {

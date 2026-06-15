@@ -27,7 +27,7 @@ public class PatientService implements PatientUseCase {
 
     @Override
     @Transactional
-    public PatientResponse createPatient(CreatePatientRequest request) {
+    public PatientResponse createPatient(CreatePatientRequest request, UUID clinicId) {
         if (patientRepository.existsByIdDocument(request.getIdDocument())) {
             throw new BusinessRuleException(
                 "A patient with ID document '" + request.getIdDocument() + "' already exists",
@@ -35,6 +35,9 @@ public class PatientService implements PatientUseCase {
             );
         }
         Patient patient = patientMapper.toDomain(request);
+        if (clinicId != null) {
+            patient = patient.toBuilder().clinicId(clinicId).build();
+        }
         Patient saved = patientRepository.save(patient);
         return patientMapper.toResponse(saved);
     }
@@ -54,13 +57,37 @@ public class PatientService implements PatientUseCase {
     }
 
     @Override
+    public PatientResponse findByIdInClinic(UUID id, UUID clinicId) {
+        Patient patient = patientRepository.findByIdAndClinicId(id, clinicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Patient", id));
+        return patientMapper.toResponse(patient);
+    }
+
+    @Override
     public Page<PatientResponse> findAll(Pageable pageable) {
         return patientRepository.findAll(pageable).map(patientMapper::toResponse);
     }
 
     @Override
+    public Page<PatientResponse> findAllByClinicId(UUID clinicId, Pageable pageable) {
+        return patientRepository.findAllByClinicId(clinicId, pageable).map(patientMapper::toResponse);
+    }
+
+    @Override
     public Page<PatientResponse> searchByName(String name, Pageable pageable) {
         return patientRepository.searchByName(name, pageable).map(patientMapper::toResponse);
+    }
+
+    @Override
+    public Page<PatientResponse> searchByNameAndClinicId(String name, UUID clinicId, Pageable pageable) {
+        return patientRepository.searchByNameAndClinicId(name, clinicId, pageable).map(patientMapper::toResponse);
+    }
+
+    @Override
+    public void validatePatientInClinic(UUID patientId, UUID clinicId) {
+        if (!patientRepository.findByIdAndClinicId(patientId, clinicId).isPresent()) {
+            throw new ResourceNotFoundException("Patient", patientId);
+        }
     }
 
     @Override

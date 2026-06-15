@@ -103,7 +103,7 @@ class PatientServiceTest {
             when(patientMapper.toResponse(samplePatient)).thenReturn(sampleResponse);
 
             // Act
-            PatientResponse result = patientService.createPatient(createRequest);
+            PatientResponse result = patientService.createPatient(createRequest, null);
 
             // Assert
             assertThat(result).isEqualTo(sampleResponse);
@@ -117,7 +117,7 @@ class PatientServiceTest {
             when(patientRepository.existsByIdDocument("V-12345678")).thenReturn(true);
 
             // Act + Assert
-            assertThatThrownBy(() -> patientService.createPatient(createRequest))
+            assertThatThrownBy(() -> patientService.createPatient(createRequest, null))
                     .isInstanceOf(BusinessRuleException.class)
                     .hasMessageContaining("V-12345678");
 

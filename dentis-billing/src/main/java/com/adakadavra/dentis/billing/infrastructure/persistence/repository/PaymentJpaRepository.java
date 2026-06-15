@@ -19,5 +19,8 @@ public interface PaymentJpaRepository extends JpaRepository<PaymentEntity, UUID>
 
     @Query("select coalesce(sum(p.amount), 0) from PaymentEntity p where p.budgetId = :budgetId")
     BigDecimal sumPaymentsByBudgetId(@Param("budgetId") UUID budgetId);
+
+    @Query("select coalesce(sum(p.amount), 0) from PaymentEntity p")
+    BigDecimal sumAllPayments();
 }
 

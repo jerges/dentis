@@ -35,6 +35,8 @@ export interface CreateTariffRequest {
   discountAllowed?: boolean;
 }
 
+export type ProcedurePaymentStatus = 'PENDING' | 'PARTIALLY_PAID' | 'PAID';
+
 export interface BudgetItem {
   id?: string;
   tariffId: string;
@@ -45,7 +47,8 @@ export interface BudgetItem {
   total?: number;
   discountPercentage?: number;
   performed?: boolean;
-  paymentStatus?: string;
+  performedAt?: string;
+  paymentStatus?: ProcedurePaymentStatus;
   notes?: string;
 }
 

@@ -5,10 +5,14 @@ import com.adakadavra.dentis.common.exception.ResourceNotFoundException;
 import com.adakadavra.dentis.scheduling.application.dto.AppointmentResponse;
 import com.adakadavra.dentis.scheduling.application.dto.CreateAppointmentRequest;
 import com.adakadavra.dentis.scheduling.application.mapper.AppointmentMapper;
+import com.adakadavra.dentis.scheduling.domain.event.AppointmentCancelledEvent;
+import com.adakadavra.dentis.scheduling.domain.event.AppointmentRescheduledEvent;
+import com.adakadavra.dentis.scheduling.domain.event.AppointmentScheduledEvent;
 import com.adakadavra.dentis.scheduling.domain.model.Appointment;
 import com.adakadavra.dentis.scheduling.domain.model.AppointmentStatus;
 import com.adakadavra.dentis.scheduling.domain.repository.AppointmentRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +27,7 @@ public class AppointmentService {
 
     private final AppointmentRepository appointmentRepository;
     private final AppointmentMapper appointmentMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public AppointmentResponse scheduleAppointment(CreateAppointmentRequest request) {
@@ -31,7 +36,9 @@ public class AppointmentService {
 
         Appointment appointment = appointmentMapper.toDomain(request);
         Appointment saved = appointmentRepository.save(appointment);
-        return appointmentMapper.toResponse(saved);
+        AppointmentResponse response = appointmentMapper.toResponse(saved);
+        eventPublisher.publishEvent(new AppointmentScheduledEvent(this, response));
+        return response;
     }
 
     @Transactional
@@ -41,7 +48,9 @@ public class AppointmentService {
         checkForSchedulingConflicts(existing.getDentistId(), newStart, newEnd, id);
 
         Appointment rescheduled = existing.withStartDateTime(newStart).withEndDateTime(newEnd);
-        return appointmentMapper.toResponse(appointmentRepository.save(rescheduled));
+        AppointmentResponse response = appointmentMapper.toResponse(appointmentRepository.save(rescheduled));
+        eventPublisher.publishEvent(new AppointmentRescheduledEvent(this, response));
+        return response;
     }
 
     @Transactional
@@ -51,6 +60,8 @@ public class AppointmentService {
             throw new BusinessRuleException("Cannot cancel a completed appointment", "APPOINTMENT_ALREADY_COMPLETED");
         }
         appointmentRepository.cancel(id);
+        AppointmentResponse response = appointmentMapper.toResponse(appointment);
+        eventPublisher.publishEvent(new AppointmentCancelledEvent(this, response));
     }
 
     @Transactional
