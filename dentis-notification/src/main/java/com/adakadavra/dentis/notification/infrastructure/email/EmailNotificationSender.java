@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
@@ -21,6 +22,7 @@ public class EmailNotificationSender implements NotificationSender {
     private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
 
+    @Async("notificationExecutor")
     @Override
     public void send(NotificationMessage message) {
         try {
