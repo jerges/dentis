@@ -123,6 +123,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/clinics/users/clinic-users.component').then((m) => m.ClinicUsersComponent)
       },
+      // Documents
+      {
+        path: 'documents',
+        canActivate: [authGuard],
+        loadComponent: () =>
+          import('./features/documents/documents-explorer.component').then((m) => m.DocumentsExplorerComponent)
+      },
       {
         path: 'ia/chat',
         canActivate: [authGuard],

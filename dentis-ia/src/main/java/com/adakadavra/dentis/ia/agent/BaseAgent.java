@@ -68,11 +68,12 @@ public abstract class BaseAgent implements AgentPort {
 
     private List<Document> retrieveContext(String query, UUID clinicId) {
         if (clinicId == null) return List.of();
+        // Solo recupera documentos de la carpeta Base de Conocimiento (kb == 'true')
         var searchRequest = SearchRequest.builder()
                 .query(query)
                 .topK(props.getTopK())
                 .similarityThreshold(props.getMinScore())
-                .filterExpression("clinic_id == '" + clinicId + "'")
+                .filterExpression("clinic_id == '" + clinicId + "' && kb == 'true'")
                 .build();
         return vectorStore.similaritySearch(searchRequest);
     }

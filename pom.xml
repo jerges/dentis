@@ -19,6 +19,7 @@
         <module>dentis-notification</module>
         <module>dentis-clinic</module>
         <module>dentis-ia</module>
+        <module>dentis-documents</module>
         <module>dentis-api</module>
     </modules>
 
@@ -109,6 +110,11 @@
             <dependency>
                 <groupId>com.adakadavra</groupId>
                 <artifactId>dentis-ia</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.adakadavra</groupId>
+                <artifactId>dentis-documents</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

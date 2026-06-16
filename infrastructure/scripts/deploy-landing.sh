@@ -15,6 +15,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+LANDING_MODULE_DIR="${PROJECT_ROOT}/infrastructure/terraform/aws/modules/landing"
 PROD_TF_DIR="${PROJECT_ROOT}/infrastructure/terraform/aws"
 DEV_TF_DIR="${PROJECT_ROOT}/infrastructure/terraform/aws/dev-ec2"
 LANDING_DIR="${PROJECT_ROOT}/landing"
@@ -29,10 +30,24 @@ BUCKET_NAME="${LANDING_BUCKET:-}"
 CF_DISTRIBUTION_ID="${LANDING_CF_ID:-}"
 
 if [[ -z "${BUCKET_NAME}" || -z "${CF_DISTRIBUTION_ID}" ]]; then
+  # Preferir el módulo standalone de landing (tiene su propio estado)
+  if [[ -f "${LANDING_MODULE_DIR}/terraform.tfstate" ]]; then
+    STATE_RESOURCES=$(python3 -c "import json,sys; d=json.load(open('${LANDING_MODULE_DIR}/terraform.tfstate')); print(len(d.get('resources',[])))" 2>/dev/null || echo "0")
+    if [[ "${STATE_RESOURCES}" -gt 0 ]]; then
+      echo "[INFO] Leyendo outputs del módulo landing (standalone)..."
+      cd "${LANDING_MODULE_DIR}"
+      BUCKET_NAME=$(terraform output -raw bucket_name 2>/dev/null || true)
+      CF_DISTRIBUTION_ID=$(terraform output -raw cloudfront_distribution_id 2>/dev/null || true)
+    fi
+  fi
+fi
+
+if [[ -z "${BUCKET_NAME}" || -z "${CF_DISTRIBUTION_ID}" ]]; then
+  # Fallback: leer del stack root (si fue aplicado como parte de la infra completa)
   if [[ -d "${PROD_TF_DIR}/.terraform" ]]; then
-    echo "[INFO] Leyendo outputs Terraform (producción)..."
+    echo "[INFO] Leyendo outputs Terraform (stack root)..."
     cd "${PROD_TF_DIR}"
-    BUCKET_NAME=$(terraform output -raw landing_bucket 2>/dev/null || true)
+    BUCKET_NAME=$(terraform output -raw landing_bucket_name 2>/dev/null || true)
     CF_DISTRIBUTION_ID=$(terraform output -raw landing_cloudfront_id 2>/dev/null || true)
   fi
 fi

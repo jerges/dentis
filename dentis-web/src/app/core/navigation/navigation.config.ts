@@ -29,6 +29,11 @@ export const APP_NAV_ITEMS: AppNavItem[] = [
   { label: 'Aranceles', icon: 'price_check', route: '/billing/tariffs' },
   { label: 'Pagos', icon: 'payments', route: '/billing/payments' },
   {
+    label: 'Documentos',
+    icon: 'folder',
+    route: '/documents'
+  },
+  {
     label: 'Asistente IA',
     icon: 'smart_toy',
     route: '/ia/chat',

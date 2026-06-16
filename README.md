@@ -31,6 +31,8 @@ Software de gestión dental integral orientado a optimizar los procesos clínico
 - Optimizar la gestión de presupuestos, aranceles y pagos.
 - Mejorar el control financiero y seguimiento de tratamientos.
 - Integrar funciones administrativas y clínicas en una sola herramienta.
+- Gestionar documentos clínicos y administrativos con control de acceso por usuario.
+- Ofrecer un asistente IA clínico basado en la base de conocimiento de la clínica.
 
 ### Módulos y funcionalidades
 
@@ -70,10 +72,25 @@ Software de gestión dental integral orientado a optimizar los procesos clínico
 
 **6. Valor agregado (futuras integraciones)**
 - Reportes financieros e indicadores por profesional.
-- Firma electrónica y gestión documental.
+- Firma electrónica y consentimientos digitales.
 - Imágenes radiográficas e integración de laboratorio.
 - Módulo de inventario e insumos.
 - Dashboard con indicadores de morosidad, tratamientos activos y ocupación de agenda.
+
+**7. Gestión Documental**
+- Carpetas y ficheros por clínica almacenados en AWS S3.
+- Visibilidad configurable por recurso: `PUBLIC` (toda la clínica), `PRIVATE` (solo el creador), `SHARED` (creador + usuarios explícitos).
+- Compartir ficheros y carpetas entre usuarios de la misma clínica.
+- Búsqueda rápida por nombre (trigrama `pg_trgm`) y contenido (full-text `tsvector` en español).
+- Carpeta especial **Base de Conocimiento** por clínica: protegida, no borrable, solo accesible por el ADMIN.
+
+**8. Asistente IA Clínico**
+- RAG (Retrieval-Augmented Generation) sobre la Base de Conocimiento de la clínica.
+- Generación con Amazon Bedrock Nova Pro; embeddings Titan v2 (1024 dimensiones).
+- Búsqueda semántica en pgvector, acotada a documentos con metadato `kb=true`.
+- Respuestas con citas a la fuente del documento.
+- Guardia de relevancia: el asistente solo responde temática odontológica.
+- Historial de conversaciones por sesión y dentista.
 
 ---
 
@@ -84,12 +101,14 @@ Software de gestión dental integral orientado a optimizar los procesos clínico
 | Capa | Tecnología |
 |------|-----------|
 | Backend | Java 25 · Spring Boot 4.0.6 · Maven multi-módulo |
-| Base de datos | PostgreSQL 16 · Liquibase (migraciones) |
+| Base de datos | PostgreSQL 16 · Liquibase (migraciones) · pgvector · pg_trgm |
 | Frontend | Angular 18 (standalone) · Angular Material · Signals |
 | Autenticación | JWT (HS256) |
+| IA / RAG | Amazon Bedrock (Nova Pro + Titan v2) · Spring AI · pgvector |
+| Almacenamiento | AWS S3 (presigned URLs · documentos + adjuntos clínicos) |
 | Email | JavaMailSender · Thymeleaf templates |
 | Documentación API | SpringDoc / Swagger UI |
-| Infraestructura | AWS ECS Fargate · RDS · ALB · ECR · Secrets Manager |
+| Infraestructura | AWS EC2 · RDS · S3 · Secrets Manager · Bedrock |
 | Dev local | Docker Compose |
 
 ### Módulos Maven
@@ -103,10 +122,12 @@ dentis/
 ├── dentis-billing       # Aranceles, presupuestos y pagos
 ├── dentis-notification  # Envío de emails (Thymeleaf)
 ├── dentis-clinic        # Clínicas y usuarios del sistema
+├── dentis-ia            # Asistente IA (RAG, Bedrock, pgvector, ingesta)
+├── dentis-documents     # Gestión documental y Base de Conocimiento
 └── dentis-api           # Controllers REST, seguridad JWT, entry point
 ```
 
-La arquitectura sigue el patrón hexagonal: los módulos de dominio (`dentis-patient`, `dentis-billing`, etc.) no dependen de `dentis-api`. Los controllers en `dentis-api` actúan como adaptadores de entrada.
+La arquitectura sigue el patrón hexagonal: los módulos de dominio (`dentis-patient`, `dentis-billing`, `dentis-documents`, etc.) no dependen de `dentis-api`. Los controllers en `dentis-api` actúan como adaptadores de entrada.
 
 ---
 
@@ -143,11 +164,16 @@ El proyecto usa **Liquibase** (integrado en Spring Boot). Las migraciones se apl
 
 ```
 dentis-api/src/main/resources/db/changelog/
-├── db.changelog-master.yaml        # Índice principal
+├── db.changelog-master.yaml              # Índice principal
 └── changes/
-    ├── 001-baseline.sql            # Esquema completo + usuarios iniciales
-    ├── 002-clinical-enhancements.sql  # dentitionType, spaceStatus en odontodiagrama
-    └── 003-demo-data.sql           # Clínica y usuario demo (context: demo, qa)
+    ├── 001-baseline.sql                  # Esquema completo + usuarios iniciales
+    ├── 002-clinical-enhancements.sql     # dentitionType, spaceStatus en odontodiagrama
+    ├── 003-demo-data.sql                 # Clínica y usuario demo (context: demo, qa)
+    ├── 004-odontogram-root-and-tooth-dx.sql  # Diagnósticos por diente y raíz
+    ├── 005-clinical-attachments.sql      # Adjuntos clínicos en S3
+    ├── 006-ia-vector.sql                 # Extensión pgvector + tabla ia_documents
+    ├── 007-ia-spring-ai-vector.sql       # Columnas compatibles Spring AI VectorStore
+    └── 008-documents.sql                 # Gestión documental (pg_trgm, carpetas, ficheros, KB)
 ```
 
 ### Entornos y contextos
@@ -337,7 +363,7 @@ docker-compose --profile mail up -d   # si está configurado en docker-compose.y
 La infraestructura está definida en Terraform bajo `infrastructure/terraform/aws/`. Consulta [`infrastructure/DEPLOYMENT.md`](infrastructure/DEPLOYMENT.md) para el proceso completo.
 
 > **Estrategia de despliegue actual:** todos los despliegues en AWS usan el perfil `dev` con contexto `demo`.
-> El paso a producción real se hará más adelante pasando `SPRING_LIQUIBASE_CONTEXTS=pro` como parámetro al task definition.
+> El paso a producción real se hará más adelante pasando `SPRING_LIQUIBASE_CONTEXTS=pro` como parámetro.
 
 Resumen rápido:
 
@@ -353,12 +379,21 @@ cd infrastructure/scripts
 ./deploy.sh
 ```
 
-Los secretos (`DB_PASSWORD`, `JWT_SECRET`, credenciales SMTP) se gestionan con **AWS Secrets Manager** y se inyectan como variables de entorno en el task definition de ECS.
+Los secretos (`DB_PASSWORD`, `JWT_SECRET`, credenciales SMTP, claves AWS Bedrock/S3) se gestionan con **AWS Secrets Manager**.
 
-### Parámetros de entorno clave en ECS
+### Parámetros de entorno clave
 
 | Variable | Dev / Demo (actual) | Producción (futuro) |
 |----------|--------------------|--------------------|
 | `SPRING_PROFILES_ACTIVE` | `dev` | `prod` (a crear) |
 | `SPRING_LIQUIBASE_CONTEXTS` | `demo` | `pro` |
 | `JWT_SECRET` | Secrets Manager | Secrets Manager |
+| `AWS_S3_BUCKET` | bucket S3 dev | bucket S3 prod |
+| `AWS_BEDROCK_REGION` | `us-east-1` | `us-east-1` |
+
+### Asistente IA — requisitos adicionales
+
+- La cuenta AWS debe tener acceso habilitado en Amazon Bedrock para los modelos **Nova Pro** (generación) y **Titan Embeddings v2** (embeddings).
+- El bucket S3 debe permitir presigned URLs (sin ACL pública). La política de bucket debe denegar acceso público directo.
+- La extensión `pgvector` debe estar habilitada en la instancia RDS (`CREATE EXTENSION IF NOT EXISTS vector`).
+- La extensión `pg_trgm` debe estar habilitada (`CREATE EXTENSION IF NOT EXISTS pg_trgm`) — aplicada automáticamente por la migración `008-documents.sql`.

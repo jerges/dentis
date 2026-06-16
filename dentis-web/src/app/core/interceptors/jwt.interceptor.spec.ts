@@ -48,5 +48,15 @@ describe('jwtInterceptor', () => {
     expect(req.request.headers.has('Authorization')).toBeFalse();
     req.flush({});
   });
+
+  it('should NOT add Authorization header to amazonaws.com presigned URLs', () => {
+    authServiceSpy.getToken.and.returnValue('jwt-token');
+
+    http.put('https://bucket.s3.amazonaws.com/presigned?X-Amz-Signature=abc', {}).subscribe();
+
+    const req = httpMock.expectOne(r => r.url.includes('amazonaws.com'));
+    expect(req.request.headers.has('Authorization')).toBeFalse();
+    req.flush(null);
+  });
 });
 

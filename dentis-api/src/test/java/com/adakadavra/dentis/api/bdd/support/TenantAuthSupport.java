@@ -28,6 +28,13 @@ public final class TenantAuthSupport {
         return authentication(new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities()));
     }
 
+    /** Returns a processor that authenticates as a regular USER belonging to {@code clinicId}. */
+    public static RequestPostProcessor asClinicUser(UUID clinicId) {
+        User user = buildUser(UUID.randomUUID(), "clinic-user-" + clinicId.toString().substring(0, 8),
+                UserRole.USER, clinicId);
+        return authentication(new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities()));
+    }
+
     /** Returns a processor that authenticates as a SUPER_ADMIN (no clinic restriction). */
     public static RequestPostProcessor asSuperAdmin() {
         User user = buildUser(UUID.randomUUID(), "super-admin-bdd", UserRole.SUPER_ADMIN, null);

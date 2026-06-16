@@ -3,13 +3,14 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { Subject, debounceTime, distinctUntilChanged, switchMap, of, catchError } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, switchMap, of, catchError, forkJoin } from 'rxjs';
 import { PatientService } from '../../../core/services/patient.service';
+import { DocumentsService } from '../../../core/services/documents.service';
 import { Patient } from '../../../core/models/patient.model';
 import { PageResponse } from '../../../core/models/api.model';
 
 interface SearchResult {
-  type: 'patient';
+  type: 'patient' | 'document';
   label: string;
   sublabel: string;
   route: string[];
@@ -49,30 +50,42 @@ interface SearchResult {
                 <span class="search-spinner"></span>
                 Buscando…
               </div>
-            } @else if (query.length >= 2 && results().length === 0) {
+            } @else if (query.length >= 2 && patientResults().length === 0 && documentResults().length === 0) {
               <div class="search-state">
                 <mat-icon>search_off</mat-icon>
                 Sin resultados para "<strong>{{ query }}</strong>"
               </div>
             } @else if (results().length > 0) {
-              <div class="results-group">
-                <div class="results-group-label">Pacientes</div>
-                @for (r of results(); track r.route[1]) {
-                  <a class="result-item"
-                     [routerLink]="r.route"
-                     (click)="close()"
-                     role="option">
-                    <div class="result-icon">
-                      <mat-icon>{{ r.icon }}</mat-icon>
-                    </div>
-                    <div class="result-copy">
-                      <span class="result-label">{{ r.label }}</span>
-                      <span class="result-sub">{{ r.sublabel }}</span>
-                    </div>
-                    <mat-icon class="result-arrow">chevron_right</mat-icon>
-                  </a>
-                }
-              </div>
+              @if (patientResults().length > 0) {
+                <div class="results-group">
+                  <div class="results-group-label">Pacientes</div>
+                  @for (r of patientResults(); track r.route[1]) {
+                    <a class="result-item" [routerLink]="r.route" (click)="close()" role="option">
+                      <div class="result-icon"><mat-icon>{{ r.icon }}</mat-icon></div>
+                      <div class="result-copy">
+                        <span class="result-label">{{ r.label }}</span>
+                        <span class="result-sub">{{ r.sublabel }}</span>
+                      </div>
+                      <mat-icon class="result-arrow">chevron_right</mat-icon>
+                    </a>
+                  }
+                </div>
+              }
+              @if (documentResults().length > 0) {
+                <div class="results-group">
+                  <div class="results-group-label">Documentos</div>
+                  @for (r of documentResults(); track r.route[1]) {
+                    <a class="result-item" [routerLink]="r.route" (click)="close()" role="option">
+                      <div class="result-icon doc-icon"><mat-icon>{{ r.icon }}</mat-icon></div>
+                      <div class="result-copy">
+                        <span class="result-label">{{ r.label }}</span>
+                        <span class="result-sub">{{ r.sublabel }}</span>
+                      </div>
+                      <mat-icon class="result-arrow">chevron_right</mat-icon>
+                    </a>
+                  }
+                </div>
+              }
             } @else {
               <div class="search-hints">
                 <div class="hint-item">
@@ -164,6 +177,10 @@ interface SearchResult {
       background: rgba(13,148,136,.10); display: flex; align-items: center; justify-content: center;
       color: var(--dentis-primary);
     }
+    .result-icon.doc-icon {
+      background: rgba(99,102,241,.10);
+      color: #6366f1;
+    }
     .result-copy { flex: 1; display: flex; flex-direction: column; }
     .result-label { font-size: 14px; font-weight: 600; }
     .result-sub { font-size: 12px; color: var(--dentis-text-muted); margin-top: 1px; }
@@ -186,10 +203,13 @@ export class GlobalSearchComponent implements OnInit, OnDestroy {
   open = signal(false);
   query = '';
   results = signal<SearchResult[]>([]);
+  patientResults = signal<SearchResult[]>([]);
+  documentResults = signal<SearchResult[]>([]);
   loading = signal(false);
 
   private search$ = new Subject<string>();
   private patientSvc = inject(PatientService);
+  private docsSvc = inject(DocumentsService);
 
   @HostListener('document:keydown', ['$event'])
   onKeydown(e: KeyboardEvent): void {
@@ -200,29 +220,38 @@ export class GlobalSearchComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    const empty: PageResponse<Patient> = { content: [], page: 0, size: 0, totalElements: 0, totalPages: 0, last: true };
+    const emptyPage: PageResponse<Patient> = { content: [], page: 0, size: 0, totalElements: 0, totalPages: 0, last: true };
 
     this.search$.pipe(
       debounceTime(300),
       distinctUntilChanged(),
       switchMap((term) => {
-        if (term.length < 2) { this.loading.set(false); return of(empty); }
+        if (term.length < 2) { this.loading.set(false); return of({ patients: emptyPage, documents: [] as any[] }); }
         this.loading.set(true);
-        return this.patientSvc.search(term, 0, 8).pipe(
-          catchError(() => of(empty))
-        );
+        return forkJoin({
+          patients: this.patientSvc.search(term, 0, 6).pipe(catchError(() => of(emptyPage))),
+          documents: this.docsSvc.search(term).pipe(catchError(() => of([])))
+        });
       })
-    ).subscribe((res) => {
+    ).subscribe(({ patients, documents }) => {
       this.loading.set(false);
-      this.results.set(
-        res.content.map((p) => ({
-          type: 'patient' as const,
-          label: `${p.lastName}, ${p.firstName}`,
-          sublabel: p.idDocument,
-          route: ['/patients', p.id],
-          icon: 'person',
-        }))
-      );
+      const pResults: SearchResult[] = patients.content.map((p) => ({
+        type: 'patient' as const,
+        label: `${p.lastName}, ${p.firstName}`,
+        sublabel: p.idDocument,
+        route: ['/patients', p.id],
+        icon: 'person',
+      }));
+      const dResults: SearchResult[] = (documents as any[]).map((d) => ({
+        type: 'document' as const,
+        label: d.name,
+        sublabel: d.folderPath ?? 'Documentos',
+        route: ['/documents'],
+        icon: 'insert_drive_file',
+      }));
+      this.patientResults.set(pResults);
+      this.documentResults.set(dResults);
+      this.results.set([...pResults, ...dResults]);
     });
   }
 
@@ -245,6 +274,8 @@ export class GlobalSearchComponent implements OnInit, OnDestroy {
   clearQuery(): void {
     this.query = '';
     this.results.set([]);
+    this.patientResults.set([]);
+    this.documentResults.set([]);
     this.loading.set(false);
   }
 }

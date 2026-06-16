@@ -37,7 +37,8 @@ public class CucumberSpringConfig {
             "db/changelog/changes/004-odontogram-root-and-tooth-dx.sql",
             "db/changelog/changes/005-clinical-attachments.sql",
             "db/changelog/changes/006-ia-vector.sql",
-            "db/changelog/changes/007-ia-spring-ai-vector.sql"
+            "db/changelog/changes/007-ia-spring-ai-vector.sql",
+            "db/changelog/changes/008-documents.sql"
     );
 
     // pgvector/pgvector includes the vector extension required by migration 006

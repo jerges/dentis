@@ -48,6 +48,10 @@
             <groupId>com.adakadavra</groupId>
             <artifactId>dentis-ia</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.adakadavra</groupId>
+            <artifactId>dentis-documents</artifactId>
+        </dependency>
 
         <!-- Spring Boot -->
         <dependency>
