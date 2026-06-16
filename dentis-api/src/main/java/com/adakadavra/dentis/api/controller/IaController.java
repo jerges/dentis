@@ -110,42 +110,6 @@ public class IaController {
         return ResponseEntity.ok(ApiResponse.ok(chatService.getMessages(id, dentistId(user))));
     }
 
-    @PostMapping("/chat/sessions/{id}/messages")
-    @PreAuthorize(IA_GUARD)
-    @Operation(summary = "Send a message and get the assistant's response")
-    public ResponseEntity<ApiResponse<ChatMessage>> sendMessage(
-            @AuthenticationPrincipal User user,
-            @PathVariable UUID id,
-            @Valid @RequestBody SendMessageRequest req) {
-        if (!props.isEnabled()) {
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                    .body(ApiResponse.error(ApiError.builder().code("IA_DISABLED").message("El módulo de IA está deshabilitado").build()));
-        }
-        String clinicTag = tenantSecurity.currentClinicId()
-                .map(UUID::toString).orElse("global");
-
-        Timer.Sample sample = Timer.start(meterRegistry);
-        ChatMessage reply = chatService.sendMessage(id, dentistId(user), req.content());
-        sample.stop(Timer.builder("dentis.ia.request")
-                .tag("clinic_id", clinicTag)
-                .register(meterRegistry));
-
-        if (reply.getInputTokens() > 0) {
-            Counter.builder("dentis.ia.tokens").tag("type", "input").tag("clinic_id", clinicTag)
-                    .register(meterRegistry).increment(reply.getInputTokens());
-        }
-        if (reply.getOutputTokens() > 0) {
-            Counter.builder("dentis.ia.tokens").tag("type", "output").tag("clinic_id", clinicTag)
-                    .register(meterRegistry).increment(reply.getOutputTokens());
-            double cost = (reply.getInputTokens() / 1000.0 * 0.0008)
-                        + (reply.getOutputTokens() / 1000.0 * 0.0032);
-            Counter.builder("dentis.ia.cost.usd").tag("clinic_id", clinicTag)
-                    .register(meterRegistry).increment(cost);
-        }
-
-        return ResponseEntity.ok(ApiResponse.ok(reply));
-    }
-
     @PostMapping(value = "/chat/sessions/{id}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @PreAuthorize(IA_GUARD)
     @Operation(summary = "Send a message and stream the assistant's response as SSE tokens")

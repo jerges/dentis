@@ -5,7 +5,6 @@ import com.adakadavra.dentis.ia.agent.AgentType;
 import com.adakadavra.dentis.ia.agent.BaseAgent;
 import com.adakadavra.dentis.ia.domain.service.RelevanceGuard;
 import com.adakadavra.dentis.ia.infrastructure.config.IaProperties;
-import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Component;
 
@@ -26,20 +25,11 @@ public class DentalAgent extends BaseAgent {
 
     private final RelevanceGuard relevanceGuard;
 
-    public DentalAgent(ChatModel chatModel,
-                       software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeAsyncClient asyncClient,
+    public DentalAgent(software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeAsyncClient asyncClient,
                        VectorStore vectorStore, IaProperties props,
                        RelevanceGuard relevanceGuard) {
-        super(chatModel, asyncClient, vectorStore, props);
+        super(asyncClient, vectorStore, props);
         this.relevanceGuard = relevanceGuard;
-    }
-
-    @Override
-    public AgentResponse ask(AgentRequest req) {
-        if (!relevanceGuard.isRelevant(req.userText())) {
-            return new AgentResponse(RelevanceGuard.OFF_TOPIC_RESPONSE, 0, 0, null);
-        }
-        return super.ask(req);
     }
 
     @Override
