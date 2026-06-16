@@ -17,6 +17,7 @@ Software de gestión dental integral orientado a optimizar los procesos clínico
 - [Variables de entorno](#variables-de-entorno)
 - [Seguridad multi-tenant](#seguridad-multi-tenant)
 - [Notificaciones por email](#notificaciones-por-email)
+- [Asistente IA — detalle técnico](#asistente-ia--detalle-técnico)
 - [Despliegue en AWS](#despliegue-en-aws)
 
 ---
@@ -91,6 +92,35 @@ Software de gestión dental integral orientado a optimizar los procesos clínico
 - Respuestas con citas a la fuente del documento.
 - Guardia de relevancia: el asistente solo responde temática odontológica.
 - Historial de conversaciones por sesión y dentista.
+- **Streaming exclusivo vía SSE**: toda la comunicación con el agente es en tiempo real (no hay endpoint bloqueante).
+- **Tool use (function calling)**: el agente puede invocar herramientas externas e internas en bucle multi-turno (hasta 8 iteraciones) con Bedrock Converse Stream API.
+- **Trazabilidad de fuentes obligatoria**: el agente indica siempre de dónde proviene cada dato (PMID, RxNorm, FDA, calculadora clínica, documentos de la clínica o conocimiento propio).
+
+**Herramientas del agente (todas con fuentes oficiales gratuitas):**
+
+| Herramienta | Fuente | Tipo |
+|---|---|---|
+| `pubmed_search` | NCBI / NIH E-utilities | API externa |
+| `drug_interaction_check` | RxNorm / NIH NLM | API externa |
+| `icd10_lookup` | NIH Clinical Tables (ICD-10-CM) | API externa |
+| `fda_drug_info` | OpenFDA / FDA (api.fda.gov) | API externa |
+| `dosage_calculator` | ADA 2024 / Farmacopea (datos embebidos) | Cálculo interno |
+| `lab_values_interpreter` | ADA / ACC-AHA / SEPA (datos embebidos) | Cálculo interno |
+
+`dosage_calculator` cubre anestésicos locales (lidocaína, articaína, mepivacaína, bupivacaína) y antibióticos dentales (amoxicilina, metronidazol, clindamicina, azitromicina) con ajustes por peso, edad y comorbilidades.
+
+`lab_values_interpreter` evalúa INR/TP/plaquetas, glucosa/HbA1c, creatinina, ALT/AST, hemoglobina, leucocitos/neutrófilos y tensión arterial frente a umbrales de seguridad para procedimientos dentales.
+
+**Eventos SSE emitidos al frontend:**
+
+| Evento | Cuándo |
+|---|---|
+| `{"t": "..."}` | Fragmento de texto generado por el modelo |
+| `{"tool": "...", "status": "searching", "label": "..."}` | Herramienta externa iniciada (consulta a API) |
+| `{"tool": "...", "status": "tooling",   "label": "..."}` | Herramienta interna iniciada (cálculo local) |
+| `{"tool": "...", "status": "done",      "label": "..."}` | Herramienta completada |
+| `{"done": true, "usage": {...}}` | Respuesta completa con métricas de tokens y coste |
+| `{"err": "..."}` | Error durante la generación |
 
 ---
 
@@ -100,7 +130,7 @@ Software de gestión dental integral orientado a optimizar los procesos clínico
 
 | Capa | Tecnología |
 |------|-----------|
-| Backend | Java 25 · Spring Boot 4.0.6 · Maven multi-módulo |
+| Backend | Java 25 · Spring Boot 4.0.6 · Maven multi-módulo · Virtual Threads |
 | Base de datos | PostgreSQL 16 · Liquibase (migraciones) · pgvector · pg_trgm |
 | Frontend | Angular 18 (standalone) · Angular Material · Signals |
 | Autenticación | JWT (HS256) |
@@ -128,6 +158,16 @@ dentis/
 ```
 
 La arquitectura sigue el patrón hexagonal: los módulos de dominio (`dentis-patient`, `dentis-billing`, `dentis-documents`, etc.) no dependen de `dentis-api`. Los controllers en `dentis-api` actúan como adaptadores de entrada.
+
+### Concurrencia: Virtual Threads (Java 25)
+
+El proyecto adopta Virtual Threads en dos niveles:
+
+- **HTTP requests** (`spring.threads.virtual.enabled=true`): cada petición REST se despacha en un hilo virtual, eliminando el cuello de botella del pool de hilos del servidor.
+- **Envío de email** (`NotificationAsyncConfig`): el envío SMTP se ejecuta en un hilo virtual independiente vía `@Async("notificationExecutor")`, sin bloquear al llamador.
+- **Streaming IA** (`IaController`): cada sesión SSE crea un hilo virtual con `Thread.ofVirtual()` que mantiene la conexión abierta mientras el agente genera la respuesta.
+
+Esto permite manejar muchas conexiones SSE simultáneas (una por conversación activa) sin agotar el pool de Tomcat.
 
 ---
 
@@ -349,11 +389,75 @@ Los siguientes eventos disparan un correo automático al paciente:
 
 Los templates HTML están en `dentis-notification/src/main/resources/templates/email/`.
 
+El envío es **asíncrono y no bloqueante**: se ejecuta en un hilo virtual dedicado (`SimpleAsyncTaskExecutor` con `virtualThreads = true`). Si el envío falla, el error queda trazado en el log sin interrumpir la operación que lo originó.
+
 Para probar notificaciones en desarrollo, usar [MailHog](https://github.com/mailhog/MailHog):
 
 ```bash
 docker-compose --profile dev up -d mailhog
 # UI disponible en http://localhost:8025
+```
+
+---
+
+## Asistente IA — detalle técnico
+
+### Flujo de una conversación
+
+```
+POST /api/v1/ia/chat/sessions/{id}/stream
+        │
+        ▼ (hilo virtual)
+IaChatService.streamMessage()
+        │  guarda mensaje usuario
+        │  carga historial
+        ▼
+DentalAgent.streamAsk()
+        │  RelevanceGuard — rechaza preguntas off-topic
+        ▼
+BaseAgent.streamAsk()   [bucle multi-turno, máx. 8 iteraciones]
+        │
+        ├─► ConverseStream → texto → SSE {"t": "..."}
+        │
+        ├─► stop_reason = tool_use
+        │       ├─► emite SSE {"tool":"...", "status":"searching"/"tooling", "label":"..."}
+        │       ├─► ejecuta herramienta
+        │       ├─► emite SSE {"tool":"...", "status":"done", "label":"..."}
+        │       └─► envía tool_result a Bedrock → siguiente turno
+        │
+        └─► stop_reason = end_turn
+                └─► SSE {"done": true, "usage": {...}}
+```
+
+### Añadir una nueva herramienta
+
+Implementar la interfaz `AgentTool` en `dentis-ia` y anotarla con `@Component`:
+
+```java
+@Component
+public class MiHerramienta implements AgentTool {
+    @Override public String name()        { return "mi_herramienta"; }
+    @Override public String description() { return "Descripción para el modelo..."; }
+    @Override public String label()       { return "Ejecutando..."; }
+    @Override public boolean isExternal() { return false; } // true si llama a una API externa
+    @Override public Document inputSchema() { /* JSON Schema como AWS Document */ }
+    @Override public String execute(Map<String, Object> input) { /* lógica */ }
+}
+```
+
+Spring la inyecta automáticamente en `DentalAgent` vía `List<AgentTool>`. No hay ningún otro registro manual.
+
+### Protocolo SSE
+
+Todos los eventos llegan como `data:` en texto plano sobre una conexión `text/event-stream`:
+
+```
+data: {"t":"La caries dental"}
+data: {"t":" es una enfermedad..."}
+data: {"tool":"pubmed_search","status":"searching","label":"Buscando en PubMed..."}
+data: {"tool":"pubmed_search","status":"done","label":"Buscando en PubMed..."}
+data: {"t":"Según PMID:38291045..."}
+data: {"done":true,"usage":{"input_tokens":312,"output_tokens":487,"cost_usd":0.00181}}
 ```
 
 ---
