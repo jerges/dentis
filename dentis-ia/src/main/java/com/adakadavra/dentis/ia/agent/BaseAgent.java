@@ -154,7 +154,8 @@ public abstract class BaseAgent implements AgentPort {
         List<ContentBlock> results = new ArrayList<>();
         for (ToolUseAcc acc : toolUses) {
             AgentTool tool = findTool(acc.name());
-            onEvent.accept(new AgentEvent.ToolEvent(acc.name(), "searching", toolLabel(acc.name())));
+            String activeStatus = (tool != null && tool.isExternal()) ? "searching" : "tooling";
+            onEvent.accept(new AgentEvent.ToolEvent(acc.name(), activeStatus, toolLabel(acc.name())));
             String result;
             if (tool != null) {
                 Map<String, Object> inputMap = documentToMap(parseJsonToDocument(acc.inputJson().toString()));

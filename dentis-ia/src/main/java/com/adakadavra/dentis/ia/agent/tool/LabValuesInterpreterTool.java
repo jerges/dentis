@@ -31,6 +31,9 @@ public class LabValuesInterpreterTool implements AgentTool {
     public String label() { return "Interpretando valores de laboratorio..."; }
 
     @Override
+    public boolean isExternal() { return false; }
+
+    @Override
     public Document inputSchema() {
         return Document.mapBuilder()
                 .putString("type", "object")

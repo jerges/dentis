@@ -120,6 +120,9 @@ public class DosageCalculatorTool implements AgentTool {
     public String label() { return "Calculando dosis segura..."; }
 
     @Override
+    public boolean isExternal() { return false; }
+
+    @Override
     public Document inputSchema() {
         return Document.mapBuilder()
                 .putString("type", "object")
