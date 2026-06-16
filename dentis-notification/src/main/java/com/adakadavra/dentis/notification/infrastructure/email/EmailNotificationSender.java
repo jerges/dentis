@@ -6,6 +6,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
@@ -31,7 +32,7 @@ public class EmailNotificationSender implements NotificationSender {
             helper.setText(html, true);
             mailSender.send(mimeMessage);
             log.info("Notification sent [type={}, recipient={}]", message.getType(), message.getRecipientEmail());
-        } catch (MessagingException e) {
+        } catch (MessagingException | MailException e) {
             log.error("Failed to send notification [type={}, recipient={}]", message.getType(), message.getRecipientEmail(), e);
         }
     }
