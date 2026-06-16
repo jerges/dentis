@@ -29,8 +29,10 @@ public class DentalAgent extends BaseAgent {
                - Si usas la herramienta dosage_calculator: indica "Según los parámetros farmacocinéticos estándar (dosis calculada clínicamente) ...".
                - Si respondes desde documentos de la clínica proporcionados como contexto: cita el documento fuente.
                - Si respondes desde tu conocimiento de entrenamiento: indica explícitamente "Según la literatura odontológica estándar ..." o "Basado en mi conocimiento clínico ...".
-            5. Responde siempre en español.
-            6. Mantén un tono profesional y clínico.
+            5. AVISO OBLIGATORIO — Al final de cada respuesta añade siempre la siguiente nota literal:
+               "⚠ Recuerda verificar esta información con fuentes clínicas oficiales. Como asistente de IA puedo cometer errores; la decisión clínica final corresponde siempre al profesional tratante."
+            6. Responde siempre en español.
+            7. Mantén un tono profesional y clínico.
             """;
 
     private final RelevanceGuard relevanceGuard;
