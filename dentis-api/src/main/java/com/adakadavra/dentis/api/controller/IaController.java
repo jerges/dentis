@@ -11,6 +11,7 @@ import com.adakadavra.dentis.common.response.ApiError;
 import com.adakadavra.dentis.common.response.ApiResponse;
 import com.adakadavra.dentis.ia.domain.model.ChatMessage;
 import com.adakadavra.dentis.ia.domain.model.ChatSession;
+import com.adakadavra.dentis.ia.agent.AgentPort;
 import com.adakadavra.dentis.ia.domain.service.IaChatService;
 import com.adakadavra.dentis.ia.domain.service.IngestionService;
 import com.adakadavra.dentis.ia.infrastructure.config.IaProperties;
@@ -132,7 +133,17 @@ public class IaController {
             Timer.Sample sample = Timer.start(meterRegistry);
             try {
                 ChatMessage reply = chatService.streamMessage(id, dentistId(user), req.content(),
-                        token -> sseSend(emitter, toJson(java.util.Map.of("t", token))));
+                        event -> {
+                            if (event instanceof AgentPort.AgentEvent.Token(String text)) {
+                                sseSend(emitter, toJson(java.util.Map.of("t", text)));
+                            } else if (event instanceof AgentPort.AgentEvent.ToolEvent toolEvent) {
+                                sseSend(emitter, toJson(java.util.Map.of(
+                                        "tool",   toolEvent.toolName(),
+                                        "status", toolEvent.status(),
+                                        "label",  toolEvent.label()
+                                )));
+                            }
+                        });
 
                 sample.stop(Timer.builder("dentis.ia.request").tag("clinic_id", clinicTag).register(meterRegistry));
 

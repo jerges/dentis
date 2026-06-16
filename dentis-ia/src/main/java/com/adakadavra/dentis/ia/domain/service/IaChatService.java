@@ -16,6 +16,8 @@ import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.function.Consumer;
 
+import static com.adakadavra.dentis.ia.agent.AgentPort.AgentEvent;
+
 @Service
 @RequiredArgsConstructor
 public class IaChatService {
@@ -50,7 +52,7 @@ public class IaChatService {
     }
 
     @Transactional
-    public ChatMessage streamMessage(UUID sessionId, UUID dentistId, String userText, Consumer<String> onToken) {
+    public ChatMessage streamMessage(UUID sessionId, UUID dentistId, String userText, Consumer<AgentEvent> onEvent) {
         ChatSession session = sessionRepo.findById(sessionId)
                 .orElseThrow(() -> new NoSuchElementException("Session not found: " + sessionId));
         if (!session.getDentistId().equals(dentistId)) {
@@ -72,7 +74,7 @@ public class IaChatService {
 
         AgentPort.AgentResponse result = agentPort.streamAsk(
                 new AgentPort.AgentRequest(sessionId, session.getClinicId(), userText, turns),
-                onToken);
+                onEvent);
 
         ChatMessage reply = messageRepo.save(ChatMessage.builder()
                 .sessionId(sessionId)

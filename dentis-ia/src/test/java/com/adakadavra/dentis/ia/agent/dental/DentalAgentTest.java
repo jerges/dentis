@@ -1,10 +1,12 @@
 package com.adakadavra.dentis.ia.agent.dental;
 
 import com.adakadavra.dentis.ia.agent.AgentPort;
+import com.adakadavra.dentis.ia.agent.AgentPort.AgentEvent;
 import com.adakadavra.dentis.ia.agent.AgentPort.AgentRequest;
 import com.adakadavra.dentis.ia.domain.service.RelevanceGuard;
 import com.adakadavra.dentis.ia.infrastructure.config.IaProperties;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -37,32 +39,36 @@ class DentalAgentTest {
     @BeforeEach
     void setUp() {
         props = new IaProperties();
-        agent = new DentalAgent(asyncClient, vectorStore, props, new RelevanceGuard());
+        agent = new DentalAgent(asyncClient, vectorStore, props, new RelevanceGuard(), List.of());
     }
 
     // ── Relevance guard ───────────────────────────────────────────────────────
 
     @Test
-    void offTopicQueryReturnsGuardResponseWithoutCallingBedrock() {
+    @DisplayName("shouldBeGuardedWhenOffTopicQueryIsReceived")
+    void shouldBeGuardedWhenOffTopicQueryIsReceived() {
         var req = new AgentRequest(UUID.randomUUID(), null, "¿Cuál es la capital de Francia?", List.of());
-        List<String> received = new ArrayList<>();
+        List<AgentEvent> received = new ArrayList<>();
 
         AgentPort.AgentResponse response = agent.streamAsk(req, received::add);
 
         assertThat(response.text()).isEqualTo(RelevanceGuard.OFF_TOPIC_RESPONSE);
-        assertThat(received).containsExactly(RelevanceGuard.OFF_TOPIC_RESPONSE);
+        assertThat(received).hasSize(1);
+        assertThat(received.get(0)).isInstanceOf(AgentEvent.Token.class);
+        assertThat(((AgentEvent.Token) received.get(0)).text()).isEqualTo(RelevanceGuard.OFF_TOPIC_RESPONSE);
         assertThat(response.inputTokens()).isZero();
         verifyNoInteractions(asyncClient);
     }
 
     @Test
-    void dentalQueryInvokesBedrockConverseStream() {
+    @DisplayName("shouldBeInvokedWhenDentalQueryIsSent")
+    void shouldBeInvokedWhenDentalQueryIsSent() {
         given(asyncClient.converseStream(any(ConverseStreamRequest.class), any()))
                 .willReturn(CompletableFuture.completedFuture(null));
 
         var req = new AgentRequest(UUID.randomUUID(), null, "¿Cómo tratar una caries?", List.of());
 
-        agent.streamAsk(req, tok -> {});
+        agent.streamAsk(req, event -> {});
 
         verify(asyncClient).converseStream(any(ConverseStreamRequest.class), any());
     }
@@ -70,25 +76,27 @@ class DentalAgentTest {
     // ── RAG context retrieval ─────────────────────────────────────────────────
 
     @Test
-    void nullClinicIdSkipsVectorStoreSearch() {
+    @DisplayName("shouldBeSkippedWhenNullClinicIdIsProvided")
+    void shouldBeSkippedWhenNullClinicIdIsProvided() {
         given(asyncClient.converseStream(any(ConverseStreamRequest.class), any()))
                 .willReturn(CompletableFuture.completedFuture(null));
 
         var req = new AgentRequest(UUID.randomUUID(), null, "caries molar", List.of());
-        agent.streamAsk(req, tok -> {});
+        agent.streamAsk(req, event -> {});
 
         verify(vectorStore, never()).similaritySearch(any(SearchRequest.class));
     }
 
     @Test
-    void clinicIdTriggersVectorStoreSearchWithFilter() {
+    @DisplayName("shouldBeSearchedWithFilterWhenClinicIdIsProvided")
+    void shouldBeSearchedWithFilterWhenClinicIdIsProvided() {
         UUID clinicId = UUID.randomUUID();
         given(vectorStore.similaritySearch(any(SearchRequest.class))).willReturn(List.of());
         given(asyncClient.converseStream(any(ConverseStreamRequest.class), any()))
                 .willReturn(CompletableFuture.completedFuture(null));
 
         var req = new AgentRequest(UUID.randomUUID(), clinicId, "caries molar", List.of());
-        agent.streamAsk(req, tok -> {});
+        agent.streamAsk(req, event -> {});
 
         ArgumentCaptor<SearchRequest> captor = ArgumentCaptor.forClass(SearchRequest.class);
         verify(vectorStore).similaritySearch(captor.capture());
@@ -100,13 +108,14 @@ class DentalAgentTest {
     // ── Stream-specific behaviour ─────────────────────────────────────────────
 
     @Test
-    void streamAskUsesModelIdFromProperties() {
+    @DisplayName("shouldBeUsingModelIdFromProperties")
+    void shouldBeUsingModelIdFromProperties() {
         given(vectorStore.similaritySearch(any(SearchRequest.class))).willReturn(List.of());
         given(asyncClient.converseStream(any(ConverseStreamRequest.class), any()))
                 .willReturn(CompletableFuture.completedFuture(null));
 
         var req = new AgentRequest(UUID.randomUUID(), UUID.randomUUID(), "periodontitis", List.of());
-        agent.streamAsk(req, tok -> {});
+        agent.streamAsk(req, event -> {});
 
         ArgumentCaptor<ConverseStreamRequest> captor = ArgumentCaptor.forClass(ConverseStreamRequest.class);
         verify(asyncClient).converseStream(captor.capture(), any());
@@ -114,13 +123,14 @@ class DentalAgentTest {
     }
 
     @Test
-    void streamAskIncludesSystemPromptInRequest() {
+    @DisplayName("shouldBeIncludingSystemPromptWithOdontologicalKeyword")
+    void shouldBeIncludingSystemPromptWithOdontologicalKeyword() {
         given(vectorStore.similaritySearch(any(SearchRequest.class))).willReturn(List.of());
         given(asyncClient.converseStream(any(ConverseStreamRequest.class), any()))
                 .willReturn(CompletableFuture.completedFuture(null));
 
         var req = new AgentRequest(UUID.randomUUID(), UUID.randomUUID(), "endodoncia", List.of());
-        agent.streamAsk(req, tok -> {});
+        agent.streamAsk(req, event -> {});
 
         ArgumentCaptor<ConverseStreamRequest> captor = ArgumentCaptor.forClass(ConverseStreamRequest.class);
         verify(asyncClient).converseStream(captor.capture(), any());
@@ -129,20 +139,22 @@ class DentalAgentTest {
     }
 
     @Test
-    void streamAskWithEmptyStreamReturnsZeroTokens() {
+    @DisplayName("shouldBeReturningZeroTokensWhenStreamIsEmpty")
+    void shouldBeReturningZeroTokensWhenStreamIsEmpty() {
         given(vectorStore.similaritySearch(any(SearchRequest.class))).willReturn(List.of());
         given(asyncClient.converseStream(any(ConverseStreamRequest.class), any()))
                 .willReturn(CompletableFuture.completedFuture(null));
 
         var req = new AgentRequest(UUID.randomUUID(), UUID.randomUUID(), "molar infectado", List.of());
-        AgentPort.AgentResponse response = agent.streamAsk(req, tok -> {});
+        AgentPort.AgentResponse response = agent.streamAsk(req, event -> {});
 
         assertThat(response.inputTokens()).isZero();
         assertThat(response.outputTokens()).isZero();
     }
 
     @Test
-    void agentTypeIsDental() {
+    @DisplayName("shouldBeOfTypeDental")
+    void shouldBeOfTypeDental() {
         assertThat(agent.agentType().name()).isEqualTo("DENTAL");
     }
 }

@@ -8,7 +8,12 @@ import java.util.function.Consumer;
 
 public interface AgentPort {
 
-    AgentResponse streamAsk(AgentRequest request, Consumer<String> onToken);
+    AgentResponse streamAsk(AgentRequest request, Consumer<AgentEvent> onEvent);
+
+    sealed interface AgentEvent {
+        record Token(String text) implements AgentEvent {}
+        record ToolEvent(String toolName, String status, String label) implements AgentEvent {}
+    }
 
     record AgentRequest(
             UUID sessionId,
