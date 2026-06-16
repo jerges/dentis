@@ -73,6 +73,15 @@ dentis:
     max-tokens: ${IA_MAX_TOKENS:1024}
     min-score: ${IA_MIN_SCORE:0.72}
     chunk-size: ${IA_CHUNK_SIZE:800}
+    model-pricing:
+      nova-pro:
+        input-price-per-1m: ${IA_NOVA_INPUT_PRICE:0.80}
+        output-price-per-1m: ${IA_NOVA_OUTPUT_PRICE:3.20}
+        margin-multiplier: ${IA_NOVA_MARGIN:3.0}
+      claude:
+        input-price-per-1m: ${IA_CLAUDE_INPUT_PRICE:3.00}
+        output-price-per-1m: ${IA_CLAUDE_OUTPUT_PRICE:15.00}
+        margin-multiplier: ${IA_CLAUDE_MARGIN:3.0}
 
 springdoc:
   api-docs:

@@ -153,19 +153,19 @@ public class IaController {
                 if (reply.getOutputTokens() > 0) {
                     Counter.builder("dentis.ia.tokens").tag("type", "output").tag("clinic_id", clinicTag)
                             .register(meterRegistry).increment(reply.getOutputTokens());
-                    double cost = (reply.getInputTokens() / 1_000_000.0 * 0.80)
-                                + (reply.getOutputTokens() / 1_000_000.0 * 3.20);
+                    IaProperties.ModelPricing pricing = props.resolvePricing(props.getGenerationModelId());
                     Counter.builder("dentis.ia.cost.usd").tag("clinic_id", clinicTag)
-                            .register(meterRegistry).increment(cost);
+                            .register(meterRegistry).increment(pricing.rawCost(reply.getInputTokens(), reply.getOutputTokens()));
                 }
 
+                IaProperties.ModelPricing pricing = props.resolvePricing(props.getGenerationModelId());
                 sseSend(emitter, toJson(java.util.Map.of(
                         "done", true,
                         "usage", java.util.Map.of(
-                                "input_tokens",  reply.getInputTokens(),
-                                "output_tokens", reply.getOutputTokens(),
-                                "cost_usd", (reply.getInputTokens() / 1_000_000.0 * 0.80)
-                                           + (reply.getOutputTokens() / 1_000_000.0 * 3.20)
+                                "input_tokens",   reply.getInputTokens(),
+                                "output_tokens",  reply.getOutputTokens(),
+                                "cost_usd",       pricing.rawCost(reply.getInputTokens(), reply.getOutputTokens()),
+                                "billed_cost_usd", pricing.billedCost(reply.getInputTokens(), reply.getOutputTokens())
                         )
                 )));
             } catch (Exception e) {
@@ -258,12 +258,17 @@ public class IaController {
             totalSessions = sessionJpaRepo.countByClinicId(clinicId);
         }
 
-        long totalMessages    = rows.stream().mapToLong(IaUserStats::messages).sum();
-        long totalInputTokens = rows.stream().mapToLong(IaUserStats::inputTokens).sum();
-        long totalOutputTokens= rows.stream().mapToLong(IaUserStats::outputTokens).sum();
+        long totalMessages     = rows.stream().mapToLong(IaUserStats::messages).sum();
+        long totalInputTokens  = rows.stream().mapToLong(IaUserStats::inputTokens).sum();
+        long totalOutputTokens = rows.stream().mapToLong(IaUserStats::outputTokens).sum();
+
+        IaProperties.ModelPricing pricing = props.resolvePricing(props.getGenerationModelId());
+        double totalRawCostUsd    = pricing.rawCost(totalInputTokens, totalOutputTokens);
+        double totalBilledCostUsd = pricing.billedCost(totalInputTokens, totalOutputTokens);
 
         return ResponseEntity.ok(ApiResponse.ok(
-                new IaStatsResponse(totalSessions, totalMessages, totalInputTokens, totalOutputTokens, rows)));
+                new IaStatsResponse(totalSessions, totalMessages, totalInputTokens, totalOutputTokens,
+                        totalRawCostUsd, totalBilledCostUsd, rows)));
     }
 
     private static long toLong(Object val) {
@@ -275,5 +280,6 @@ public class IaController {
     public record CreateSessionRequest(String title, UUID clinicId) {}
     public record SendMessageRequest(@NotBlank String content) {}
     public record IaUserStats(String username, String clinicName, long messages, long inputTokens, long outputTokens) {}
-    public record IaStatsResponse(long totalSessions, long totalMessages, long totalInputTokens, long totalOutputTokens, List<IaUserStats> rows) {}
+    public record IaStatsResponse(long totalSessions, long totalMessages, long totalInputTokens, long totalOutputTokens,
+                                  double totalRawCostUsd, double totalBilledCostUsd, List<IaUserStats> rows) {}
 }
