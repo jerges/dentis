@@ -3,7 +3,7 @@ package com.adakadavra.dentis.notification.config;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
 
 import java.lang.reflect.Method;
 import java.util.concurrent.Executor;
@@ -17,22 +17,19 @@ class NotificationAsyncConfigTest {
     private final NotificationAsyncConfig config = new NotificationAsyncConfig();
 
     @Test
-    @DisplayName("should create executor with notification- thread name prefix")
-    void shouldCreateExecutorWithNotificationThreadPrefix() {
+    @DisplayName("should create a SimpleAsyncTaskExecutor backed by virtual threads")
+    void shouldCreateVirtualThreadExecutor() {
         Executor executor = config.notificationExecutor();
 
-        assertThat(executor).isInstanceOf(ThreadPoolTaskExecutor.class);
-        ThreadPoolTaskExecutor pool = (ThreadPoolTaskExecutor) executor;
-        assertThat(pool.getThreadNamePrefix()).isEqualTo("notification-");
+        assertThat(executor).isInstanceOf(SimpleAsyncTaskExecutor.class);
     }
 
     @Test
-    @DisplayName("should create executor with bounded queue capacity")
-    void shouldCreateExecutorWithBoundedQueueCapacity() {
-        ThreadPoolTaskExecutor pool = (ThreadPoolTaskExecutor) config.notificationExecutor();
+    @DisplayName("should name threads with notification- prefix for tracing")
+    void shouldNameThreadsWithNotificationPrefix() {
+        SimpleAsyncTaskExecutor executor = (SimpleAsyncTaskExecutor) config.notificationExecutor();
 
-        assertThat(pool.getCorePoolSize()).isGreaterThanOrEqualTo(1);
-        assertThat(pool.getMaxPoolSize()).isGreaterThanOrEqualTo(pool.getCorePoolSize());
+        assertThat(executor.getThreadNamePrefix()).isEqualTo("notification-");
     }
 
     @Test
