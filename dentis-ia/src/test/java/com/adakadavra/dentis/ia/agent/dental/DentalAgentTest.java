@@ -24,21 +24,26 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
+import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeAsyncClient;
+import software.amazon.awssdk.services.bedrockruntime.model.ConverseStreamRequest;
+import software.amazon.awssdk.services.bedrockruntime.model.ConverseStreamResponseHandler;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class DentalAgentTest {
 
     @Mock ChatModel chatModel;
+    @Mock BedrockRuntimeAsyncClient asyncClient;
     @Mock VectorStore vectorStore;
     @Mock ChatResponse chatResponse;
     @Mock Generation generation;
@@ -52,7 +57,7 @@ class DentalAgentTest {
     @BeforeEach
     void setUp() {
         props = new IaProperties();
-        agent = new DentalAgent(chatModel, vectorStore, props, new RelevanceGuard());
+        agent = new DentalAgent(chatModel, asyncClient, vectorStore, props, new RelevanceGuard());
     }
 
     // ── Relevance guard ───────────────────────────────────────────────────────
@@ -250,7 +255,76 @@ class DentalAgentTest {
         assertThat(agent.agentType().name()).isEqualTo("DENTAL");
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // ── streamAsk ─────────────────────────────────────────────────────────────
+
+    @Test
+    void streamAskOffTopicReturnsThroughGuardWithoutCallingBedrock() {
+        var req = new AgentRequest(UUID.randomUUID(), null, "¿Cuál es la capital de Francia?", List.of());
+        List<String> received = new ArrayList<>();
+
+        AgentPort.AgentResponse response = agent.streamAsk(req, received::add);
+
+        assertThat(response.text()).isEqualTo(RelevanceGuard.OFF_TOPIC_RESPONSE);
+        assertThat(received).containsExactly(RelevanceGuard.OFF_TOPIC_RESPONSE);
+        assertThat(response.inputTokens()).isZero();
+        verifyNoInteractions(asyncClient);
+    }
+
+    @Test
+    void streamAskDentalQueryInvokesBedrockConverseStream() {
+        given(asyncClient.converseStream(any(ConverseStreamRequest.class), any()))
+                .willReturn(CompletableFuture.completedFuture(null));
+
+        var req = new AgentRequest(UUID.randomUUID(), null, "¿Cómo tratar una caries?", List.of());
+
+        agent.streamAsk(req, tok -> {});
+
+        verify(asyncClient).converseStream(any(ConverseStreamRequest.class), any());
+        verify(chatModel, never()).call(any(Prompt.class)); // streaming never uses blocking call
+    }
+
+    @Test
+    void streamAskUsesModelIdFromProperties() {
+        given(vectorStore.similaritySearch(any(SearchRequest.class))).willReturn(List.of());
+        given(asyncClient.converseStream(any(ConverseStreamRequest.class), any()))
+                .willReturn(CompletableFuture.completedFuture(null));
+
+        var req = new AgentRequest(UUID.randomUUID(), UUID.randomUUID(), "periodontitis", List.of());
+        agent.streamAsk(req, tok -> {});
+
+        ArgumentCaptor<ConverseStreamRequest> captor = ArgumentCaptor.forClass(ConverseStreamRequest.class);
+        verify(asyncClient).converseStream(captor.capture(), any());
+        assertThat(captor.getValue().modelId()).isEqualTo(props.getGenerationModelId());
+    }
+
+    @Test
+    void streamAskIncludesSystemPromptInRequest() {
+        given(vectorStore.similaritySearch(any(SearchRequest.class))).willReturn(List.of());
+        given(asyncClient.converseStream(any(ConverseStreamRequest.class), any()))
+                .willReturn(CompletableFuture.completedFuture(null));
+
+        var req = new AgentRequest(UUID.randomUUID(), UUID.randomUUID(), "endodoncia", List.of());
+        agent.streamAsk(req, tok -> {});
+
+        ArgumentCaptor<ConverseStreamRequest> captor = ArgumentCaptor.forClass(ConverseStreamRequest.class);
+        verify(asyncClient).converseStream(captor.capture(), any());
+        assertThat(captor.getValue().system()).isNotEmpty();
+        assertThat(captor.getValue().system().get(0).text()).contains("odontológico");
+    }
+
+    @Test
+    void streamAskWithEmptyStreamReturnsZeroTokens() {
+        given(vectorStore.similaritySearch(any(SearchRequest.class))).willReturn(List.of());
+        given(asyncClient.converseStream(any(ConverseStreamRequest.class), any()))
+                .willReturn(CompletableFuture.completedFuture(null));
+
+        var req = new AgentRequest(UUID.randomUUID(), UUID.randomUUID(), "molar infectado", List.of());
+        AgentPort.AgentResponse response = agent.streamAsk(req, tok -> {});
+
+        // When Bedrock stream completes without metadata events, tokens default to 0
+        assertThat(response.inputTokens()).isZero();
+        assertThat(response.outputTokens()).isZero();
+    }
 
     private void stubChatModel(String text) {
         given(assistantMessage.getText()).willReturn(text);

@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -11,6 +11,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { Subscription } from 'rxjs';
 import { IaService } from '../../../core/services/ia.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ChatSession, ChatMessage } from '../../../core/models/ia.model';
@@ -111,7 +112,13 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
                     </div>
                   </div>
                 }
-                @if (loadingSend()) {
+                @if (streamingText()) {
+                  <div class="message-row assistant-row">
+                    <div class="message-bubble assistant-bubble">
+                      <p class="msg-text">{{ streamingText() }}<span class="cursor-blink">▋</span></p>
+                    </div>
+                  </div>
+                } @else if (loadingSend()) {
                   <div class="message-row assistant-row">
                     <div class="message-bubble assistant-bubble typing-bubble">
                       <mat-spinner diameter="20" />
@@ -226,6 +233,8 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
       border-bottom-left-radius: 4px;
     }
     .typing-bubble { display: flex; align-items: center; gap: 10px; }
+    .cursor-blink { animation: blink 0.9s step-start infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
 
     .msg-text { margin: 0 0 6px; white-space: pre-wrap; }
     .msg-meta {
@@ -268,19 +277,21 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
     }
   `]
 })
-export class IaChatComponent implements OnInit, AfterViewChecked {
+export class IaChatComponent implements OnInit, OnDestroy, AfterViewChecked {
   @ViewChild('messagesArea') messagesAreaRef?: ElementRef<HTMLDivElement>;
 
-  sessions = signal<ChatSession[]>([]);
+  sessions      = signal<ChatSession[]>([]);
   activeSession = signal<ChatSession | null>(null);
-  messages = signal<ChatMessage[]>([]);
+  messages      = signal<ChatMessage[]>([]);
+  streamingText = signal('');
 
   loadingSessions = signal(false);
   loadingMessages = signal(false);
-  loadingSend = signal(false);
+  loadingSend     = signal(false);
 
   inputText = '';
   private shouldScrollToBottom = false;
+  private streamSub?: Subscription;
 
   constructor(
     private readonly ia: IaService,
@@ -288,9 +299,9 @@ export class IaChatComponent implements OnInit, AfterViewChecked {
     private readonly snack: MatSnackBar
   ) {}
 
-  ngOnInit(): void {
-    this.loadSessions();
-  }
+  ngOnInit(): void { this.loadSessions(); }
+
+  ngOnDestroy(): void { this.streamSub?.unsubscribe(); }
 
   ngAfterViewChecked(): void {
     if (this.shouldScrollToBottom) {
@@ -302,11 +313,8 @@ export class IaChatComponent implements OnInit, AfterViewChecked {
   loadSessions(): void {
     this.loadingSessions.set(true);
     this.ia.listSessions().subscribe({
-      next: (list) => {
-        this.sessions.set(list);
-        this.loadingSessions.set(false);
-      },
-      error: () => this.loadingSessions.set(false)
+      next: list  => { this.sessions.set(list); this.loadingSessions.set(false); },
+      error: ()   => this.loadingSessions.set(false)
     });
   }
 
@@ -314,55 +322,62 @@ export class IaChatComponent implements OnInit, AfterViewChecked {
     this.activeSession.set(session);
     this.loadingMessages.set(true);
     this.ia.getMessages(session.id).subscribe({
-      next: (msgs) => {
-        this.messages.set(msgs);
-        this.loadingMessages.set(false);
-        this.shouldScrollToBottom = true;
-      },
-      error: () => this.loadingMessages.set(false)
+      next: msgs => { this.messages.set(msgs); this.loadingMessages.set(false); this.shouldScrollToBottom = true; },
+      error: ()  => this.loadingMessages.set(false)
     });
   }
 
   newSession(): void {
-    const isSuperAdmin = this.auth.getRole() === 'SUPER_ADMIN';
-    const req = isSuperAdmin ? {} : {};
-    this.ia.createSession(req).subscribe({
-      next: (session) => {
-        this.sessions.update(list => [session, ...list]);
-        this.activeSession.set(session);
-        this.messages.set([]);
-      },
+    this.ia.createSession({}).subscribe({
+      next: session => { this.sessions.update(l => [session, ...l]); this.activeSession.set(session); this.messages.set([]); },
       error: () => this.snack.open('Error al crear sesión', 'Cerrar', { duration: 3000 })
     });
   }
 
   sendMessage(): void {
-    const text = this.inputText.trim();
-    if (!text || !this.activeSession()) return;
+    const text    = this.inputText.trim();
+    const session = this.activeSession();
+    if (!text || !session) return;
 
     this.inputText = '';
     this.loadingSend.set(true);
+    this.streamingText.set('');
+
+    // Optimistically add user message
+    const userMsg: ChatMessage = {
+      id: crypto.randomUUID(), sessionId: session.id, role: 'USER',
+      content: text, citations: null, inputTokens: 0, outputTokens: 0,
+      createdAt: new Date().toISOString()
+    };
+    this.messages.update(msgs => [...msgs, userMsg]);
     this.shouldScrollToBottom = true;
 
-    this.ia.sendMessage(this.activeSession()!.id, text).subscribe({
-      next: (assistantMsg) => {
-        const userMsg: ChatMessage = {
-          id: crypto.randomUUID(),
-          sessionId: this.activeSession()!.id,
-          role: 'USER',
-          content: text,
-          citations: null,
-          inputTokens: 0,
-          outputTokens: 0,
-          createdAt: new Date().toISOString()
-        };
-        this.messages.update(msgs => [...msgs, userMsg, assistantMsg]);
-        this.loadingSend.set(false);
-        this.shouldScrollToBottom = true;
+    this.streamSub?.unsubscribe();
+    this.streamSub = this.ia.streamMessage(session.id, text).subscribe({
+      next: ev => {
+        if ('t' in ev) {
+          this.streamingText.update(s => s + ev.t);
+          this.shouldScrollToBottom = true;
+        } else if ('done' in ev && ev.done) {
+          // Commit the streamed message to the messages list
+          const assistantMsg: ChatMessage = {
+            id: crypto.randomUUID(), sessionId: session.id, role: 'ASSISTANT',
+            content: this.streamingText(),
+            citations: null,
+            inputTokens:  ev.usage?.input_tokens  ?? 0,
+            outputTokens: ev.usage?.output_tokens ?? 0,
+            createdAt: new Date().toISOString()
+          };
+          this.messages.update(msgs => [...msgs, assistantMsg]);
+          this.streamingText.set('');
+          this.loadingSend.set(false);
+          this.shouldScrollToBottom = true;
+        }
       },
-      error: (err) => {
+      error: err => {
+        this.streamingText.set('');
         this.loadingSend.set(false);
-        const msg = err?.error?.message ?? 'Error al enviar el mensaje';
+        const msg = err?.message ?? 'Error al enviar el mensaje';
         this.snack.open(msg, 'Cerrar', { duration: 4000 });
       }
     });
@@ -371,11 +386,8 @@ export class IaChatComponent implements OnInit, AfterViewChecked {
   deleteSession(sessionId: string): void {
     this.ia.deleteSession(sessionId).subscribe({
       next: () => {
-        this.sessions.update(list => list.filter(s => s.id !== sessionId));
-        if (this.activeSession()?.id === sessionId) {
-          this.activeSession.set(null);
-          this.messages.set([]);
-        }
+        this.sessions.update(l => l.filter(s => s.id !== sessionId));
+        if (this.activeSession()?.id === sessionId) { this.activeSession.set(null); this.messages.set([]); }
       },
       error: () => this.snack.open('Error al eliminar sesión', 'Cerrar', { duration: 3000 })
     });
@@ -383,10 +395,7 @@ export class IaChatComponent implements OnInit, AfterViewChecked {
 
   onEnter(event: Event): void {
     const ke = event as KeyboardEvent;
-    if (!ke.shiftKey) {
-      ke.preventDefault();
-      this.sendMessage();
-    }
+    if (!ke.shiftKey) { ke.preventDefault(); this.sendMessage(); }
   }
 
   private scrollToBottom(): void {

@@ -352,7 +352,7 @@ Los templates HTML están en `dentis-notification/src/main/resources/templates/e
 Para probar notificaciones en desarrollo, usar [MailHog](https://github.com/mailhog/MailHog):
 
 ```bash
-docker-compose --profile mail up -d   # si está configurado en docker-compose.yml
+docker-compose --profile dev up -d mailhog
 # UI disponible en http://localhost:8025
 ```
 
@@ -360,40 +360,51 @@ docker-compose --profile mail up -d   # si está configurado en docker-compose.y
 
 ## Despliegue en AWS
 
-La infraestructura está definida en Terraform bajo `infrastructure/terraform/aws/`. Consulta [`infrastructure/DEPLOYMENT.md`](infrastructure/DEPLOYMENT.md) para el proceso completo.
+La infraestructura está definida en Terraform bajo `infrastructure/terraform/aws/dev-ec2/`. Consulta [`infrastructure/DEPLOYMENT.md`](infrastructure/DEPLOYMENT.md) para el proceso completo.
 
-> **Estrategia de despliegue actual:** todos los despliegues en AWS usan el perfil `dev` con contexto `demo`.
-> El paso a producción real se hará más adelante pasando `SPRING_LIQUIBASE_CONTEXTS=pro` como parámetro.
+> **Estrategia de despliegue actual:** EC2 `t4g.small` (ARM Graviton2) en `us-east-1` con Docker Compose.
+> Todos los despliegues usan el perfil `dev` con contexto `demo`.
+> El paso a producción real se hará pasando `SPRING_LIQUIBASE_CONTEXTS=pro`.
 
 Resumen rápido:
 
 ```bash
-cd infrastructure/terraform/aws
-terraform init
-terraform plan -var-file="terraform.tfvars"
-terraform apply
+# Primer deploy (provisiona EC2, construye imágenes y arranca servicios)
+./infrastructure/scripts/deploy.sh
 
-# Deploy de la imagen
-cd infrastructure/scripts
-./build-backend.sh
-./deploy.sh
+# Solo rebuild de imágenes (cuando hay cambios en el código)
+DOCKER_PLATFORMS=linux/arm64 ./infrastructure/scripts/build-backend.sh
+DOCKER_PLATFORMS=linux/arm64 ./infrastructure/scripts/build-web.sh
+
+# Deploy de la landing page a CloudFront
+./infrastructure/scripts/deploy-landing.sh
 ```
 
-Los secretos (`DB_PASSWORD`, `JWT_SECRET`, credenciales SMTP, claves AWS Bedrock/S3) se gestionan con **AWS Secrets Manager**.
+Los secretos en dev se gestionan mediante el archivo `.env.ec2` (generado automáticamente por `deploy.sh` a partir de los outputs de Terraform). En producción deben usarse **AWS Secrets Manager**.
 
-### Parámetros de entorno clave
+### Recursos AWS activos
 
-| Variable | Dev / Demo (actual) | Producción (futuro) |
-|----------|--------------------|--------------------|
-| `SPRING_PROFILES_ACTIVE` | `dev` | `prod` (a crear) |
-| `SPRING_LIQUIBASE_CONTEXTS` | `demo` | `pro` |
-| `JWT_SECRET` | Secrets Manager | Secrets Manager |
-| `AWS_S3_BUCKET` | bucket S3 dev | bucket S3 prod |
-| `AWS_BEDROCK_REGION` | `us-east-1` | `us-east-1` |
+| Recurso | Identificador | URL |
+|---------|--------------|-----|
+| EC2 t4g.small | `i-06cdd459dff85e0db` — `18.210.9.9` | — |
+| ECR backend | `dentis-dev-backend:latest` | — |
+| ECR frontend | `dentis-dev-web:latest` | — |
+| S3 adjuntos | `dentis-dev-attachments-742671448563` | — |
+| Landing CloudFront | `E2Y4ZFSUC6AGL2` | `https://d3tv842cpzfh1w.cloudfront.net` |
 
-### Asistente IA — requisitos adicionales
+### Variables de entorno IA (Bedrock)
 
-- La cuenta AWS debe tener acceso habilitado en Amazon Bedrock para los modelos **Nova Pro** (generación) y **Titan Embeddings v2** (embeddings).
-- El bucket S3 debe permitir presigned URLs (sin ACL pública). La política de bucket debe denegar acceso público directo.
-- La extensión `pgvector` debe estar habilitada en la instancia RDS (`CREATE EXTENSION IF NOT EXISTS vector`).
-- La extensión `pg_trgm` debe estar habilitada (`CREATE EXTENSION IF NOT EXISTS pg_trgm`) — aplicada automáticamente por la migración `008-documents.sql`.
+| Variable | Valor actual |
+|----------|-------------|
+| `IA_ENABLED` | `true` |
+| `IA_GEN_MODEL` | `us.amazon.nova-pro-v1:0` |
+| `IA_EMBED_MODEL` | `amazon.titan-embed-text-v2:0` |
+| `IA_MIN_SCORE` | `0.72` |
+| `IA_CHUNK_SIZE` | `800` |
+| `S3_ATTACHMENTS_BUCKET` | `dentis-dev-attachments-742671448563` |
+
+### Requisitos de la cuenta AWS
+
+- Acceso habilitado en Amazon Bedrock para **Nova Pro** (generación) y **Titan Embeddings v2** (embeddings).
+- El bucket S3 sin ACL pública; presigned URLs generadas por la aplicación.
+- Extensiones `pgvector` y `pg_trgm` activas en PostgreSQL — se instalan automáticamente por Liquibase (changelogs 006 y 008).

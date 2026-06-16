@@ -15,6 +15,7 @@ import com.adakadavra.dentis.ia.domain.service.IaChatService;
 import com.adakadavra.dentis.ia.domain.service.IngestionService;
 import com.adakadavra.dentis.ia.infrastructure.config.IaProperties;
 import com.adakadavra.dentis.ia.infrastructure.persistence.repository.ChatSessionJpaRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -23,11 +24,17 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import java.io.IOException;
 
 import java.util.List;
 import java.util.UUID;
@@ -46,6 +53,9 @@ public class IaController {
     private final IaProperties props;
     private final ChatSessionJpaRepository sessionJpaRepo;
     private final MeterRegistry meterRegistry;
+    private final ObjectMapper objectMapper;
+
+    private static final Logger log = LoggerFactory.getLogger(IaController.class);
 
     // ─── Guard helper ────────────────────────────────────────────────────────
 
@@ -134,6 +144,76 @@ public class IaController {
         }
 
         return ResponseEntity.ok(ApiResponse.ok(reply));
+    }
+
+    @PostMapping(value = "/chat/sessions/{id}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @PreAuthorize(IA_GUARD)
+    @Operation(summary = "Send a message and stream the assistant's response as SSE tokens")
+    public SseEmitter streamMessage(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID id,
+            @Valid @RequestBody SendMessageRequest req) {
+
+        if (!props.isEnabled()) {
+            SseEmitter emitter = new SseEmitter(0L);
+            sseSend(emitter, "{\"err\":\"El módulo de IA está deshabilitado\"}");
+            emitter.complete();
+            return emitter;
+        }
+
+        String clinicTag = tenantSecurity.currentClinicId().map(UUID::toString).orElse("global");
+        SseEmitter emitter = new SseEmitter(300_000L); // 5 min max
+
+        Thread.ofVirtual().name("sse-ia-" + id).start(() -> {
+            Timer.Sample sample = Timer.start(meterRegistry);
+            try {
+                ChatMessage reply = chatService.streamMessage(id, dentistId(user), req.content(),
+                        token -> sseSend(emitter, toJson(java.util.Map.of("t", token))));
+
+                sample.stop(Timer.builder("dentis.ia.request").tag("clinic_id", clinicTag).register(meterRegistry));
+
+                if (reply.getInputTokens() > 0)
+                    Counter.builder("dentis.ia.tokens").tag("type", "input").tag("clinic_id", clinicTag)
+                            .register(meterRegistry).increment(reply.getInputTokens());
+                if (reply.getOutputTokens() > 0) {
+                    Counter.builder("dentis.ia.tokens").tag("type", "output").tag("clinic_id", clinicTag)
+                            .register(meterRegistry).increment(reply.getOutputTokens());
+                    double cost = (reply.getInputTokens() / 1_000_000.0 * 0.80)
+                                + (reply.getOutputTokens() / 1_000_000.0 * 3.20);
+                    Counter.builder("dentis.ia.cost.usd").tag("clinic_id", clinicTag)
+                            .register(meterRegistry).increment(cost);
+                }
+
+                sseSend(emitter, toJson(java.util.Map.of(
+                        "done", true,
+                        "usage", java.util.Map.of(
+                                "input_tokens",  reply.getInputTokens(),
+                                "output_tokens", reply.getOutputTokens(),
+                                "cost_usd", (reply.getInputTokens() / 1_000_000.0 * 0.80)
+                                           + (reply.getOutputTokens() / 1_000_000.0 * 3.20)
+                        )
+                )));
+            } catch (Exception e) {
+                log.error("[sse-ia] error session={}: {}", id, e.getMessage());
+                sseSend(emitter, toJson(java.util.Map.of("err", e.getMessage() != null ? e.getMessage() : "Error interno")));
+            } finally {
+                try { emitter.complete(); } catch (Exception ignored) {}
+            }
+        });
+
+        return emitter;
+    }
+
+    private void sseSend(SseEmitter emitter, String json) {
+        try {
+            emitter.send(SseEmitter.event().data(json));
+        } catch (IOException e) {
+            log.debug("[sse-ia] client disconnected");
+        }
+    }
+
+    private String toJson(Object obj) {
+        try { return objectMapper.writeValueAsString(obj); } catch (Exception e) { return "{}"; }
     }
 
     @DeleteMapping("/chat/sessions/{id}")

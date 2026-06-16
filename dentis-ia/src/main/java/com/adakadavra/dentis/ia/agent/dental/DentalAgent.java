@@ -26,9 +26,11 @@ public class DentalAgent extends BaseAgent {
 
     private final RelevanceGuard relevanceGuard;
 
-    public DentalAgent(ChatModel chatModel, VectorStore vectorStore, IaProperties props,
+    public DentalAgent(ChatModel chatModel,
+                       software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeAsyncClient asyncClient,
+                       VectorStore vectorStore, IaProperties props,
                        RelevanceGuard relevanceGuard) {
-        super(chatModel, vectorStore, props);
+        super(chatModel, asyncClient, vectorStore, props);
         this.relevanceGuard = relevanceGuard;
     }
 
@@ -38,6 +40,15 @@ public class DentalAgent extends BaseAgent {
             return new AgentResponse(RelevanceGuard.OFF_TOPIC_RESPONSE, 0, 0, null);
         }
         return super.ask(req);
+    }
+
+    @Override
+    public AgentResponse streamAsk(AgentRequest req, java.util.function.Consumer<String> onToken) {
+        if (!relevanceGuard.isRelevant(req.userText())) {
+            onToken.accept(RelevanceGuard.OFF_TOPIC_RESPONSE);
+            return new AgentResponse(RelevanceGuard.OFF_TOPIC_RESPONSE, 0, 0, null);
+        }
+        return super.streamAsk(req, onToken);
     }
 
     @Override

@@ -522,9 +522,9 @@
 
     document.querySelectorAll('.anim').forEach(el => observer.observe(el));
 
-    // Rewrite login links to use same host with port 8081 (dev: landing:80 + backoffice:8081)
+    // Rewrite login links to point to the dev EC2 frontend
     (function() {
-      var loginUrl = location.protocol + '//' + location.hostname + ':8081/login';
+      var loginUrl = 'http://18.210.9.9:8081/login';
       document.querySelectorAll('a[href="/app/login"]').forEach(function(a) {
         a.href = loginUrl;
       });

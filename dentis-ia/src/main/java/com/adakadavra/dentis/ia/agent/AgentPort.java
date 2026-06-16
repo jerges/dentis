@@ -4,10 +4,13 @@ import com.adakadavra.dentis.ia.domain.model.ChatRole;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 public interface AgentPort {
 
     AgentResponse ask(AgentRequest request);
+
+    AgentResponse streamAsk(AgentRequest request, Consumer<String> onToken);
 
     record AgentRequest(
             UUID sessionId,

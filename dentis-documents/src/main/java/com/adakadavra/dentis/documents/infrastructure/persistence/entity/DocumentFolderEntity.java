@@ -4,7 +4,6 @@ import com.adakadavra.dentis.documents.domain.model.FolderType;
 import com.adakadavra.dentis.documents.domain.model.Visibility;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.UuidGenerator;
 import org.springframework.data.domain.Persistable;
 
 import java.time.LocalDateTime;
@@ -23,7 +22,6 @@ import java.util.UUID;
 public class DocumentFolderEntity implements Persistable<UUID> {
 
     @Id
-    @UuidGenerator
     @Column(updatable = false, nullable = false)
     private UUID id;
 

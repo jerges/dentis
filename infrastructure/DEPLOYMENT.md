@@ -1,202 +1,257 @@
-# Dentis — Guía de Despliegue en la Nube
+# Dentis — Guía de Despliegue
 
-## Estructura
+## Arquitectura actual (desarrollo)
 
 ```
 infrastructure/
 ├── docker/
-│   └── Dockerfile              ← Multi-stage build (JDK 21 → JRE slim)
+│   ├── Dockerfile          ← Backend: Maven multi-stage (JDK 25 → JRE alpine)
+│   └── Dockerfile.web      ← Frontend: Node 20 → Nginx 1.27
+├── scripts/
+│   ├── deploy.sh           ← Orquestador completo (Terraform + files + Compose)
+│   ├── build-backend.sh    ← Build + push ECR + restart app en EC2
+│   ├── build-web.sh        ← Build + push ECR + restart web en EC2
+│   ├── deploy-landing.sh   ← S3 + CloudFront (modo prod) o SCP EC2 (modo dev)
+│   ├── start-ec2.sh        ← Inicia servicios Compose en EC2
+│   ├── stop-ec2.sh         ← Para servicios Compose en EC2
+│   └── destroy.sh          ← Destruye infraestructura Terraform
 └── terraform/
-    ├── aws/                    ← ECS Fargate + RDS + ALB + ECR + Secrets Manager
-    └── azure/                  ← Container Apps + PostgreSQL + ACR + Key Vault
+    └── aws/
+        ├── dev-ec2/        ← Stack activo: EC2 t2.small + S3 + IAM + CloudWatch
+        └── modules/
+            └── landing/    ← Landing page: S3 privado + CloudFront OAC
 ```
 
 ---
 
-## Opción A — AWS
+## Entorno de desarrollo (activo)
 
-### Entorno de desarrollo simple en EC2
+Stack: EC2 `t2.small` en `us-east-1` con Docker Compose.
 
-Para trabajar en dev con una sola EC2 (Docker Compose + PostgreSQL local + imagen privada en ECR), usa el stack independiente en:
+### Recursos AWS aprovisionados
 
-- `infrastructure/terraform/aws/dev-ec2`
-- Guía de llaves SSH: `infrastructure/DEPLOYMENT-DEV-EC2.md`
-
-### Servicios creados
-| Recurso | Servicio AWS |
-|---|---|
-| Contenedor | ECS Fargate |
-| Registro Docker | ECR |
-| Base de datos | RDS PostgreSQL 16 |
-| Load Balancer | ALB (Application Load Balancer) |
-| Secretos | Secrets Manager |
-| Red | VPC + subnets públicas/privadas + NAT |
-| Logs | CloudWatch Logs |
-
-### Pre-requisitos
-```bash
-# 1. Instalar herramientas
-brew install terraform awscli
-
-# 2. Autenticarte en AWS
-aws configure
-# AWS Access Key ID:      REPLACE_WITH_YOUR_KEY_ID
-# AWS Secret Access Key:  REPLACE_WITH_YOUR_SECRET
-# Default region:         us-east-1
-
-# 3. Crear bucket S3 para estado de Terraform
-aws s3 mb s3://dentis-terraform-state-UNIQUE_SUFFIX --region us-east-1
-aws s3api put-bucket-versioning \
-  --bucket dentis-terraform-state-UNIQUE_SUFFIX \
-  --versioning-configuration Status=Enabled
-
-# 4. Crear tabla DynamoDB para lock
-aws dynamodb create-table \
-  --table-name dentis-terraform-lock \
-  --attribute-definitions AttributeName=LockID,AttributeType=S \
-  --key-schema AttributeName=LockID,KeyType=HASH \
-  --billing-mode PAY_PER_REQUEST \
-  --region us-east-1
-```
-
-### Despliegue
-```bash
-cd infrastructure/terraform/aws
-
-# Actualizar backend.tf con tu bucket y tabla
-# Luego:
-terraform init
-
-cp terraform.tfvars.example terraform.tfvars
-# Editar terraform.tfvars con tus valores
-
-# Pasar secrets de forma segura (sin escribirlos en archivos)
-export TF_VAR_db_password="TU_PASSWORD_AQUI"
-export TF_VAR_jwt_secret="TU_JWT_SECRET_MIN_32_CHARS"
-export TF_VAR_mail_username="tu-email@gmail.com"
-export TF_VAR_mail_password="TU_APP_PASSWORD"
-
-terraform plan
-terraform apply
-```
-
-### GitHub Actions Secrets (para CI/CD en AWS)
-Configurar en Settings → Secrets → Actions:
-
-| Secret | Descripción |
-|---|---|
-| `AWS_ACCESS_KEY_ID` | IAM Access Key |
-| `AWS_SECRET_ACCESS_KEY` | IAM Secret Key |
-| `AWS_REGION` | Región (ej: us-east-1) |
-| `ECR_REPOSITORY_URL` | URL del repositorio ECR (output de Terraform) |
-| `ECS_CLUSTER_NAME` | Nombre del cluster ECS (output de Terraform) |
-| `ECS_SERVICE_NAME` | Nombre del servicio ECS (output de Terraform) |
-
----
-
-## Opción B — Azure
-
-### Servicios creados
-| Recurso | Servicio Azure |
-|---|---|
-| Contenedor | Azure Container Apps |
-| Registro Docker | Azure Container Registry (ACR) |
-| Base de datos | Azure Database for PostgreSQL Flexible Server |
-| Secretos | Azure Key Vault |
-| Red | VNet + subnets con delegation |
-| Logs | Log Analytics Workspace |
-
-### Pre-requisitos
-```bash
-# 1. Instalar herramientas
-brew install terraform azure-cli
-
-# 2. Autenticarte en Azure
-az login
-
-# 3. Crear Service Principal para Terraform (anotar el output)
-az ad sp create-for-rbac \
-  --name "dentis-terraform-sp" \
-  --role Contributor \
-  --scopes /subscriptions/REPLACE_WITH_SUBSCRIPTION_ID \
-  --sdk-auth
-# Guarda el JSON completo — lo usarás como AZURE_CREDENTIALS en GitHub
-
-# 4. Crear Storage Account para el estado de Terraform
-az group create --name rg-dentis-tfstate --location eastus
-az storage account create \
-  --name dentistfstateXXXX \
-  --resource-group rg-dentis-tfstate \
-  --location eastus \
-  --sku Standard_LRS
-az storage container create \
-  --name tfstate \
-  --account-name dentistfstateXXXX
-```
-
-### Despliegue
-```bash
-cd infrastructure/terraform/azure
-
-# Actualizar backend.tf con tu storage account
-# Luego:
-
-# Variables de autenticación del Service Principal
-export ARM_SUBSCRIPTION_ID="REPLACE_WITH_SUBSCRIPTION_ID"
-export ARM_TENANT_ID="REPLACE_WITH_TENANT_ID"
-export ARM_CLIENT_ID="REPLACE_WITH_CLIENT_ID"
-export ARM_CLIENT_SECRET="REPLACE_WITH_CLIENT_SECRET"
-
-terraform init
-
-cp terraform.tfvars.example terraform.tfvars
-# Editar terraform.tfvars con tus valores
-
-# Pasar secrets de forma segura
-export TF_VAR_db_admin_password="TU_PASSWORD_AQUI"
-export TF_VAR_jwt_secret="TU_JWT_SECRET_MIN_32_CHARS"
-export TF_VAR_mail_username="tu-email@gmail.com"
-export TF_VAR_mail_password="TU_APP_PASSWORD"
-
-terraform plan
-terraform apply
-```
-
-### GitHub Actions Secrets (para CI/CD en Azure)
-Configurar en Settings → Secrets → Actions:
-
-| Secret | Descripción |
-|---|---|
-| `AZURE_CREDENTIALS` | JSON completo del Service Principal (az ad sp create-for-rbac) |
-| `ACR_LOGIN_SERVER` | Login server del ACR (output de Terraform) |
-| `ACR_USERNAME` | Admin username del ACR (output de Terraform) |
-| `ACR_PASSWORD` | Admin password del ACR (output de Terraform) |
-| `ACR_NAME` | Nombre del ACR |
-| `CONTAINER_APP_NAME` | Nombre del Container App (output de Terraform) |
-| `AZURE_RESOURCE_GROUP` | Nombre del Resource Group (output de Terraform) |
-
----
-
-## Push manual de imagen Docker
-
-### AWS
-```bash
-# Obtener los comandos exactos del output de Terraform
-terraform output docker_push_commands
-```
-
-### Azure
-```bash
-terraform output docker_push_commands
-```
-
----
-
-## Regiones recomendadas para Venezuela (menor latencia)
-
-| Nube | Región | Ubicación |
+| Recurso | Tipo | Nombre / ID |
 |---|---|---|
-| AWS | `us-east-1` | Virginia (recomendada) |
-| AWS | `sa-east-1` | São Paulo (más cercana) |
-| Azure | `eastus` | Virginia |
-| Azure | `brazilsouth` | São Paulo (más cercana) |
+| EC2 | t4g.small (arm64, Graviton2) | `i-06cdd459dff85e0db` |
+| IP pública | Elastic IP | `18.210.9.9` |
+| ECR backend | Imagen Docker | `742671448563.dkr.ecr.us-east-1.amazonaws.com/dentis-dev-backend:latest` |
+| ECR frontend | Imagen Docker | `742671448563.dkr.ecr.us-east-1.amazonaws.com/dentis-dev-web:latest` |
+| S3 adjuntos | Bucket privado | `dentis-dev-attachments-742671448563` |
+| S3 landing | Bucket privado | `dentis-landing` |
+| CloudFront | Distribución OAC | `E2Y4ZFSUC6AGL2` |
+| CloudWatch | Logs + Alarms | `/dentis/dev/*` — 5 alarmas |
+| Bedrock | IAM role | EC2 role con `bedrock:InvokeModel` |
+
+### URLs del entorno dev
+
+| Servicio | URL |
+|---|---|
+| Landing page (prod) | `https://d3tv842cpzfh1w.cloudfront.net` |
+| Landing page (dev) | `http://18.210.9.9:80` |
+| Frontend Angular | `http://18.210.9.9:8081` |
+| Backend API | `http://18.210.9.9:8080` |
+| MailHog UI | `http://18.210.9.9:8025` |
+| Prometheus | `http://18.210.9.9:9090` |
+| Grafana | `http://18.210.9.9:3000` (admin / dentis2026) |
+
+### Servicios en Docker Compose
+
+| Contenedor | Imagen | Puerto |
+|---|---|---|
+| `dentis-app` | ECR backend (JDK 25) | 8080 |
+| `dentis-web` | ECR frontend (Nginx) | 8081 |
+| `dentis-landing` | nginx:1.27-alpine | 80 |
+| `dentis-postgres` | pgvector/pgvector:pg16 | 5432 |
+| `dentis-liquibase` | liquibase:4.24 | — |
+| `dentis-mailhog` | mailhog:latest | 1025 / 8025 |
+| `dentis-prometheus` | prom/prometheus:v2.52.0 | 9090 |
+| `dentis-grafana` | grafana:10.4.3 | 3000 |
+
+---
+
+## Despliegue completo (primera vez o actualización total)
+
+```bash
+# Requisitos: aws CLI + terraform + docker buildx + ssh configurado
+./infrastructure/scripts/deploy.sh
+```
+
+El script:
+1. Valida cuenta AWS (`742671448563`)
+2. Crea `terraform.tfvars` si no existe (interactivo la primera vez)
+3. `terraform apply` — provisiona EC2, VPC, IAM, S3, CloudWatch
+4. Genera `.env.ec2` con los outputs de Terraform (incluye `S3_ATTACHMENTS_BUCKET`)
+5. Espera SSH + Docker daemon
+6. Copia archivos al EC2 (`docker-compose.dev.yml`, `.env`, recursos Liquibase, landing, monitoring)
+7. `docker compose pull && docker compose up -d`
+8. Verifica salud de todos los servicios (timeout 5 min)
+
+Variables de entorno opcionales:
+```bash
+AUTO_APPLY=false          # Salta terraform apply (solo redeploy)
+RESET_DB_VOLUME=true      # Resetea volumen de postgres
+RESET_ALL_VOLUMES=true    # Resetea todos los volúmenes
+VERIFY_DEPLOYMENT=false   # Salta health checks
+```
+
+---
+
+## Rebuild y redeploy de imágenes
+
+Solo cuando hay cambios en el código del backend o el frontend:
+
+```bash
+# Backend (Java/Spring Boot)
+DOCKER_PLATFORMS=linux/arm64 ./infrastructure/scripts/build-backend.sh
+
+# Frontend (Angular)
+DOCKER_PLATFORMS=linux/arm64 ./infrastructure/scripts/build-web.sh
+```
+
+El script hace:
+1. Build multi-stage Docker (Maven + JRE / Node + Nginx)
+2. Push a ECR
+3. SSH al EC2 → `docker compose pull <svc> && docker compose up -d <svc>`
+
+> **Nota:** `linux/arm64` es el target correcto para el EC2 `t4g.small` (Graviton2 ARM64).
+> En Apple Silicon, la compilación es nativa (sin QEMU) — build en ~3-5 min.
+
+---
+
+## Despliegue de la landing page
+
+```bash
+./infrastructure/scripts/deploy-landing.sh
+```
+
+Detección automática de modo:
+- **S3 + CloudFront** (modo activo): lee outputs del módulo `modules/landing/`
+- **EC2 dev** (fallback): copia archivos al EC2 vía SCP y recarga nginx
+
+---
+
+## Arrancar / parar el entorno dev
+
+```bash
+# Arrancar EC2 (desde AWS CLI)
+aws ec2 start-instances --instance-ids i-06cdd459dff85e0db --region us-east-1 --profile jbello
+
+# Iniciar servicios Compose (EC2 ya debe estar running)
+./infrastructure/scripts/start-ec2.sh
+
+# Parar servicios Compose
+./infrastructure/scripts/stop-ec2.sh
+
+# Parar instancia EC2
+aws ec2 stop-instances --instance-ids i-06cdd459dff85e0db --region us-east-1 --profile jbello
+```
+
+> La instancia tiene un Lambda de auto-stop que la para automáticamente tras 2 horas de ejecución.
+
+---
+
+## Variables de entorno necesarias
+
+El archivo `.env.ec2` (no commiteado) se genera automáticamente por `deploy.sh` leyendo los outputs de Terraform. Variables clave:
+
+```dotenv
+AWS_REGION=us-east-1
+APP_IMAGE=742671448563.dkr.ecr.us-east-1.amazonaws.com/dentis-dev-backend:latest
+WEB_IMAGE=742671448563.dkr.ecr.us-east-1.amazonaws.com/dentis-dev-web:latest
+S3_ATTACHMENTS_BUCKET=dentis-dev-attachments-742671448563
+
+# IA (Amazon Bedrock)
+IA_ENABLED=true
+IA_GEN_MODEL=us.amazon.nova-pro-v1:0
+IA_EMBED_MODEL=amazon.titan-embed-text-v2:0
+IA_MIN_SCORE=0.72
+IA_CHUNK_SIZE=800
+```
+
+El `.env.ec2` se copia al EC2 como `/opt/dentis/.env` durante el deploy.
+
+---
+
+## IAM — permisos del EC2 role
+
+El role de EC2 tiene las siguientes políticas:
+
+| Política / permiso | Para qué |
+|---|---|
+| `AmazonEC2ContainerRegistryReadOnly` | Pull de imágenes ECR |
+| `AmazonSSMManagedInstanceCore` | Session Manager (SSH alternativo) |
+| `CloudWatchAgentServerPolicy` | Métricas de memoria/disco |
+| `logs:CreateLogGroup`, `logs:PutLogEvents` | Logs de contenedores a CloudWatch |
+| `s3:GetObject`, `s3:PutObject`, `s3:DeleteObject` en `dentis-dev-attachments-*` | Adjuntos clínicos y documentos |
+| `bedrock:InvokeModel` | Asistente IA (Nova Pro + Titan v2) |
+
+---
+
+## Requisitos de la base de datos
+
+PostgreSQL 16 con extensiones:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS vector;       -- pgvector (embeddings IA)
+CREATE EXTENSION IF NOT EXISTS pg_trgm;      -- búsqueda trigram (documentos)
+CREATE EXTENSION IF NOT EXISTS unaccent;     -- búsqueda sin tildes
+```
+
+Estas extensiones se activan automáticamente mediante Liquibase (changelogs 001 y 006).
+
+---
+
+## Módulo landing (CloudFront)
+
+Stack Terraform independiente en `modules/landing/`:
+
+```bash
+cd infrastructure/terraform/aws/modules/landing
+terraform init
+terraform apply
+```
+
+Recursos creados:
+- S3 bucket `dentis-landing` (privado, versioning activado)
+- CloudFront OAC `E1H3L0WSRER146`
+- Distribución CloudFront `E2Y4ZFSUC6AGL2` — `https://d3tv842cpzfh1w.cloudfront.net`
+
+Deploy de contenido:
+```bash
+./infrastructure/scripts/deploy-landing.sh
+```
+
+---
+
+## SSH y Session Manager
+
+```bash
+# SSH directo
+ssh -i ~/.ssh/dentis-dev-ec2 ec2-user@18.210.9.9
+
+# Session Manager (sin puerto SSH abierto)
+aws ssm start-session --target i-06cdd459dff85e0db --region us-east-1 --profile jbello
+```
+
+Logs en EC2:
+```bash
+cd /opt/dentis
+sudo docker compose logs --tail=50 app
+sudo docker compose logs --tail=50 web
+sudo docker compose logs --tail=50 liquibase
+```
+
+---
+
+## Monitoreo
+
+CloudWatch Logs: `/dentis/dev/app`, `/dentis/dev/web`, `/dentis/dev/postgres`, `/dentis/dev/liquibase`, `/dentis/dev/mailhog`, `/dentis/dev/landing`
+
+CloudWatch Alarms (SNS `dentis-dev-alerts`):
+- CPU > 80% durante 10 min
+- Status check failed
+- Memoria > 85%
+- Disco / > 80%
+
+Grafana: `http://18.210.9.9:3000` (admin / dentis2026) — dashboards con métricas de Spring Boot y base de datos.

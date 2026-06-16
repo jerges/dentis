@@ -9,6 +9,8 @@ COPY dentis-clinical/pom.xml dentis-clinical/
 COPY dentis-billing/pom.xml dentis-billing/
 COPY dentis-notification/pom.xml dentis-notification/
 COPY dentis-clinic/pom.xml dentis-clinic/
+COPY dentis-ia/pom.xml dentis-ia/
+COPY dentis-documents/pom.xml dentis-documents/
 COPY dentis-api/pom.xml dentis-api/
 
 RUN mvn dependency:go-offline -q 2>/dev/null || true
@@ -20,6 +22,8 @@ COPY dentis-clinical/src dentis-clinical/src
 COPY dentis-billing/src dentis-billing/src
 COPY dentis-notification/src dentis-notification/src
 COPY dentis-clinic/src dentis-clinic/src
+COPY dentis-ia/src dentis-ia/src
+COPY dentis-documents/src dentis-documents/src
 COPY dentis-api/src dentis-api/src
 
 RUN mvn clean package -DskipTests -pl dentis-api -am -q \

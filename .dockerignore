@@ -1,0 +1,39 @@
+# Node modules — each module builds its own dependencies inside Docker
+dentis-web/node_modules/
+node_modules/
+
+# Build outputs — built inside Docker
+dentis-web/dist/
+dentis-web/.angular/
+
+# Maven local repo and build artifacts — downloaded inside Docker
+**/target/
+.m2/
+
+# Development and test files
+**/*.spec.ts
+**/*.test.java
+**/src/test/
+
+# IDE and OS files
+.idea/
+*.iml
+.DS_Store
+**/.DS_Store
+
+# Git
+.git/
+.gitignore
+
+# Local config files (never commit, never send to Docker daemon)
+.env
+.env.*
+**/terraform.tfvars
+**/.terraform/
+**/terraform.tfstate*
+
+# Docs and infrastructure files not needed in the image
+infrastructure/terraform/
+infrastructure/monitoring/
+*.md
+landing/
