@@ -53,9 +53,9 @@ public class IaController {
     private final IaProperties props;
     private final ChatSessionJpaRepository sessionJpaRepo;
     private final MeterRegistry meterRegistry;
-    private final ObjectMapper objectMapper;
 
     private static final Logger log = LoggerFactory.getLogger(IaController.class);
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     // ─── Guard helper ────────────────────────────────────────────────────────
 
@@ -213,7 +213,7 @@ public class IaController {
     }
 
     private String toJson(Object obj) {
-        try { return objectMapper.writeValueAsString(obj); } catch (Exception e) { return "{}"; }
+        try { return MAPPER.writeValueAsString(obj); } catch (Exception e) { return "{}"; }
     }
 
     @DeleteMapping("/chat/sessions/{id}")
