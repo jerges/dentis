@@ -273,8 +273,6 @@ public class ClinicalRecordEntityMapper {
         }
         return result;
     }
-<<<<<<< HEAD
-=======
 
     private String serializeRootFindings(Set<RootFinding> findings) {
         if (findings == null || findings.isEmpty()) return null;
@@ -289,6 +287,5 @@ public class ClinicalRecordEntityMapper {
         }
         return result;
     }
->>>>>>> main
 }
 

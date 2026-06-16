@@ -16,6 +16,5 @@ public enum ToothCondition {
     DEFECTIVE_FILLING,
     ERUPTING,
     IMPACTED,
-    ROOT_REMNANT,
-    DEFECTIVE_FILLING
+    ROOT_REMNANT
 }
