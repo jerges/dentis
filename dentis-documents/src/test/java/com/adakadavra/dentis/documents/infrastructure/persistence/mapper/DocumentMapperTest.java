@@ -2,6 +2,7 @@ package com.adakadavra.dentis.documents.infrastructure.persistence.mapper;
 
 import com.adakadavra.dentis.documents.domain.model.ClinicDocument;
 import com.adakadavra.dentis.documents.domain.model.DocumentFolder;
+import com.adakadavra.dentis.documents.domain.model.DocumentVisibility;
 import com.adakadavra.dentis.documents.domain.model.DocumentZone;
 import com.adakadavra.dentis.documents.infrastructure.persistence.entity.ClinicDocumentEntity;
 import com.adakadavra.dentis.documents.infrastructure.persistence.entity.DocumentFolderEntity;
@@ -36,6 +37,7 @@ class DocumentMapperTest {
                     .name("Base de Conocimiento IA")
                     .s3Prefix("clinics/" + clinicId + "/knowledge-base/")
                     .zone(DocumentZone.KNOWLEDGE_BASE).systemFolder(true)
+                    .visibility(DocumentVisibility.PUBLIC)
                     .createdBy(userId).createdAt(now)
                     .build();
 
@@ -47,6 +49,7 @@ class DocumentMapperTest {
             assertThat(domain.getName()).isEqualTo("Base de Conocimiento IA");
             assertThat(domain.getZone()).isEqualTo(DocumentZone.KNOWLEDGE_BASE);
             assertThat(domain.isSystem()).isTrue();
+            assertThat(domain.getVisibility()).isEqualTo(DocumentVisibility.PUBLIC);
             assertThat(domain.getCreatedBy()).isEqualTo(userId);
         }
 
@@ -57,6 +60,7 @@ class DocumentMapperTest {
                     .id(id).clinicId(clinicId).parentId(null)
                     .name("Facturas").s3Prefix("clinics/" + clinicId + "/general/")
                     .zone(DocumentZone.GENERAL).system(false)
+                    .visibility(DocumentVisibility.PRIVATE)
                     .createdBy(userId).createdAt(now)
                     .build();
 
@@ -66,6 +70,7 @@ class DocumentMapperTest {
             assertThat(entity.getName()).isEqualTo("Facturas");
             assertThat(entity.getZone()).isEqualTo(DocumentZone.GENERAL);
             assertThat(entity.isSystemFolder()).isFalse();
+            assertThat(entity.getVisibility()).isEqualTo(DocumentVisibility.PRIVATE);
         }
 
         @Test
@@ -75,6 +80,7 @@ class DocumentMapperTest {
                     .id(id).clinicId(clinicId).parentId(UUID.randomUUID())
                     .name("Protocolos").s3Prefix("clinics/x/kb/protocolos/")
                     .zone(DocumentZone.KNOWLEDGE_BASE).systemFolder(false)
+                    .visibility(DocumentVisibility.PUBLIC)
                     .createdBy(userId).createdAt(now)
                     .build();
 
@@ -102,6 +108,7 @@ class DocumentMapperTest {
                     .s3Key("clinics/x/kb/uuid-protocol.pdf")
                     .fileSize(204800L).description("Protocolo clínico")
                     .uploadedBy(userId).uploadedAt(now).indexedForIa(true)
+                    .visibility(DocumentVisibility.PRIVATE)
                     .build();
 
             ClinicDocument domain = mapper.toDomain(entity);
@@ -112,6 +119,7 @@ class DocumentMapperTest {
             assertThat(domain.getFileSize()).isEqualTo(204800L);
             assertThat(domain.isIndexedForIa()).isTrue();
             assertThat(domain.getS3Key()).isEqualTo("clinics/x/kb/uuid-protocol.pdf");
+            assertThat(domain.getVisibility()).isEqualTo(DocumentVisibility.PRIVATE);
         }
 
         @Test
@@ -123,6 +131,7 @@ class DocumentMapperTest {
                     .s3Key("clinics/x/docs/uuid-factura.pdf")
                     .fileSize(51200L).description(null)
                     .uploadedBy(userId).uploadedAt(now).indexedForIa(false)
+                    .visibility(DocumentVisibility.PRIVATE)
                     .build();
 
             ClinicDocumentEntity entity = mapper.toEntity(domain);
@@ -131,6 +140,7 @@ class DocumentMapperTest {
             assertThat(entity.getFileName()).isEqualTo("factura.pdf");
             assertThat(entity.isIndexedForIa()).isFalse();
             assertThat(entity.getDescription()).isNull();
+            assertThat(entity.getVisibility()).isEqualTo(DocumentVisibility.PRIVATE);
         }
 
         @Test
@@ -142,6 +152,7 @@ class DocumentMapperTest {
                     .s3Key("clinics/x/kb/uuid-guia.pdf")
                     .fileSize(1024L).description("Guía de tratamiento")
                     .uploadedBy(userId).uploadedAt(now).indexedForIa(true)
+                    .visibility(DocumentVisibility.PRIVATE)
                     .build();
 
             ClinicDocumentEntity roundtripped = mapper.toEntity(mapper.toDomain(original));
@@ -151,6 +162,7 @@ class DocumentMapperTest {
             assertThat(roundtripped.getS3Key()).isEqualTo(original.getS3Key());
             assertThat(roundtripped.isIndexedForIa()).isEqualTo(original.isIndexedForIa());
             assertThat(roundtripped.getDescription()).isEqualTo(original.getDescription());
+            assertThat(roundtripped.getVisibility()).isEqualTo(original.getVisibility());
         }
     }
 }

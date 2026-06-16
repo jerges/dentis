@@ -14,6 +14,18 @@ const generalFolder: DocumentFolder = {
   s3Prefix: 'clinics/c1/general/',
   zone: 'GENERAL',
   system: false,
+  visibility: 'PUBLIC',
+  createdAt: '2026-01-01T10:00:00'
+};
+
+const privateFolder: DocumentFolder = {
+  id: 'folder-priv',
+  parentId: null,
+  name: 'Mis Notas',
+  s3Prefix: 'clinics/c1/general/mis-notas/',
+  zone: 'GENERAL',
+  system: false,
+  visibility: 'PRIVATE',
   createdAt: '2026-01-01T10:00:00'
 };
 
@@ -24,6 +36,7 @@ const kbFolder: DocumentFolder = {
   s3Prefix: 'clinics/c1/knowledge-base/',
   zone: 'KNOWLEDGE_BASE',
   system: true,
+  visibility: 'PUBLIC',
   createdAt: '2026-01-01T10:00:00'
 };
 
@@ -35,6 +48,19 @@ const sampleDoc: ClinicDocument = {
   fileSize: 51200,
   description: null,
   indexedForIa: false,
+  visibility: 'PUBLIC',
+  uploadedAt: '2026-01-01T10:00:00'
+};
+
+const privateDoc: ClinicDocument = {
+  id: 'doc-priv',
+  folderId: 'folder-1',
+  fileName: 'privado.pdf',
+  contentType: 'application/pdf',
+  fileSize: 10240,
+  description: null,
+  indexedForIa: false,
+  visibility: 'PRIVATE',
   uploadedAt: '2026-01-01T10:00:00'
 };
 
@@ -132,15 +158,34 @@ describe('DocumentsManagerComponent', () => {
     svcSpy.createFolder.and.returnValue(of(generalFolder));
     component.newFolderName = 'Contratos';
     component.newFolderZone = 'GENERAL';
+    component.newFolderVisibility = 'PUBLIC';
     component.showNewFolderDialog.set(true);
 
     component.createFolder();
 
     expect(svcSpy.createFolder).toHaveBeenCalledWith(
-      jasmine.objectContaining({ name: 'Contratos', zone: 'GENERAL' })
+      jasmine.objectContaining({ name: 'Contratos', zone: 'GENERAL', visibility: 'PUBLIC' })
     );
     expect(component.showNewFolderDialog()).toBeFalse();
     expect(svcSpy.listFolders).toHaveBeenCalledTimes(2);
+  });
+
+  it('createFolder should pass PRIVATE visibility when set', () => {
+    svcSpy.createFolder.and.returnValue(of(privateFolder));
+    component.newFolderName = 'Mis Notas';
+    component.newFolderZone = 'GENERAL';
+    component.newFolderVisibility = 'PRIVATE';
+    component.showNewFolderDialog.set(true);
+
+    component.createFolder();
+
+    expect(svcSpy.createFolder).toHaveBeenCalledWith(
+      jasmine.objectContaining({ name: 'Mis Notas', visibility: 'PRIVATE' })
+    );
+  });
+
+  it('newFolderVisibility should default to PUBLIC', () => {
+    expect(component.newFolderVisibility).toBe('PUBLIC');
   });
 
   it('createFolder should do nothing when name is blank', () => {
@@ -204,6 +249,15 @@ describe('DocumentsManagerComponent', () => {
 
     expect(component.searchQuery()).toBe('');
     expect(component.searchResults().length).toBe(0);
+  });
+
+  it('uploadVisibility should default to PUBLIC', () => {
+    expect(component.uploadVisibility).toBe('PUBLIC');
+  });
+
+  it('PRIVATE document should be identifiable by visibility field', () => {
+    expect(privateDoc.visibility).toBe('PRIVATE');
+    expect(sampleDoc.visibility).toBe('PUBLIC');
   });
 
   describe('fileIcon', () => {

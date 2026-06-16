@@ -60,3 +60,14 @@ Feature: Document Controller integration
     And documents api has a document "manual-procedimiento.pdf" in that folder
     When documents api searches for "manual"
     Then documents response status should be 200
+
+  Scenario: Create PRIVATE folder
+    When documents api creates a PRIVATE GENERAL folder named "Mis Notas"
+    Then documents response status should be 201
+    And documents response folder visibility is "PRIVATE"
+
+  Scenario: Register PRIVATE document
+    Given documents api has a GENERAL folder named "Facturas Privadas"
+    When documents api registers a PRIVATE document "privado.pdf" in that folder
+    Then documents response status should be 201
+    And documents document visibility is "PRIVATE"

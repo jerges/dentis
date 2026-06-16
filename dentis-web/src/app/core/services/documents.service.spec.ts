@@ -13,6 +13,18 @@ const folder: DocumentFolder = {
   s3Prefix: 'clinics/c1/general/',
   zone: 'GENERAL',
   system: false,
+  visibility: 'PUBLIC',
+  createdAt: '2026-01-01T10:00:00'
+};
+
+const privateFolder: DocumentFolder = {
+  id: 'folder-priv',
+  parentId: null,
+  name: 'Mis Notas',
+  s3Prefix: 'clinics/c1/general/mis-notas/',
+  zone: 'GENERAL',
+  system: false,
+  visibility: 'PRIVATE',
   createdAt: '2026-01-01T10:00:00'
 };
 
@@ -23,6 +35,7 @@ const kbFolder: DocumentFolder = {
   s3Prefix: 'clinics/c1/knowledge-base/',
   zone: 'KNOWLEDGE_BASE',
   system: true,
+  visibility: 'PUBLIC',
   createdAt: '2026-01-01T10:00:00'
 };
 
@@ -34,6 +47,19 @@ const doc: ClinicDocument = {
   fileSize: 51200,
   description: null,
   indexedForIa: false,
+  visibility: 'PUBLIC',
+  uploadedAt: '2026-01-01T10:00:00'
+};
+
+const privateDoc: ClinicDocument = {
+  id: 'doc-priv',
+  folderId: 'folder-1',
+  fileName: 'privado.pdf',
+  contentType: 'application/pdf',
+  fileSize: 10240,
+  description: null,
+  indexedForIa: false,
+  visibility: 'PRIVATE',
   uploadedAt: '2026-01-01T10:00:00'
 };
 
@@ -72,8 +98,8 @@ describe('DocumentsService', () => {
   });
 
   describe('createFolder', () => {
-    it('should POST to /folders with request body', () => {
-      const payload = { parentId: null, name: 'Protocolos', zone: 'GENERAL' as const };
+    it('should POST to /folders with request body including visibility', () => {
+      const payload = { parentId: null, name: 'Protocolos', zone: 'GENERAL' as const, visibility: 'PUBLIC' as const };
       let result: DocumentFolder | undefined;
       service.createFolder(payload).subscribe(r => (result = r));
 
@@ -82,6 +108,17 @@ describe('DocumentsService', () => {
       expect(req.request.body).toEqual(payload);
       req.flush(folder);
       expect(result).toEqual(folder);
+    });
+
+    it('should POST with PRIVATE visibility when specified', () => {
+      const payload = { parentId: null, name: 'Mis Notas', zone: 'GENERAL' as const, visibility: 'PRIVATE' as const };
+      let result: DocumentFolder | undefined;
+      service.createFolder(payload).subscribe(r => (result = r));
+
+      const req = httpMock.expectOne(`${API}/folders`);
+      expect(req.request.body.visibility).toBe('PRIVATE');
+      req.flush(privateFolder);
+      expect(result?.visibility).toBe('PRIVATE');
     });
   });
 
@@ -133,18 +170,36 @@ describe('DocumentsService', () => {
   });
 
   describe('registerDocument', () => {
-    it('should POST to root endpoint and return saved document', () => {
+    it('should POST to root endpoint and return saved document with PUBLIC visibility', () => {
       const payload = {
         folderId: 'folder-1', fileName: 'factura.pdf', contentType: 'application/pdf',
-        s3Key: 'clinics/c1/general/uuid-factura.pdf', fileSize: 51200, description: null
+        s3Key: 'clinics/c1/general/uuid-factura.pdf', fileSize: 51200, description: null,
+        visibility: 'PUBLIC' as const
       };
       let result: ClinicDocument | undefined;
       service.registerDocument(payload).subscribe(r => (result = r));
 
       const req = httpMock.expectOne(API);
       expect(req.request.method).toBe('POST');
+      expect(req.request.body.visibility).toBe('PUBLIC');
       req.flush(doc);
       expect(result?.fileName).toBe('factura.pdf');
+      expect(result?.visibility).toBe('PUBLIC');
+    });
+
+    it('should POST with PRIVATE visibility and return private document', () => {
+      const payload = {
+        folderId: 'folder-1', fileName: 'privado.pdf', contentType: 'application/pdf',
+        s3Key: 'clinics/c1/general/uuid-privado.pdf', fileSize: 10240, description: null,
+        visibility: 'PRIVATE' as const
+      };
+      let result: ClinicDocument | undefined;
+      service.registerDocument(payload).subscribe(r => (result = r));
+
+      const req = httpMock.expectOne(API);
+      expect(req.request.body.visibility).toBe('PRIVATE');
+      req.flush(privateDoc);
+      expect(result?.visibility).toBe('PRIVATE');
     });
   });
 

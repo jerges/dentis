@@ -1,6 +1,7 @@
 package com.adakadavra.dentis.documents.domain.service;
 
 import com.adakadavra.dentis.documents.domain.model.DocumentFolder;
+import com.adakadavra.dentis.documents.domain.model.DocumentVisibility;
 import com.adakadavra.dentis.documents.domain.model.DocumentZone;
 import com.adakadavra.dentis.documents.domain.repository.ClinicDocumentRepository;
 import com.adakadavra.dentis.documents.domain.repository.DocumentFolderRepository;
@@ -83,6 +84,7 @@ class DocumentFolderServiceTest {
             assertThat(saved.getZone()).isEqualTo(DocumentZone.KNOWLEDGE_BASE);
             assertThat(saved.getParentId()).isNull();
             assertThat(saved.getS3Prefix()).contains("knowledge-base");
+            assertThat(saved.getVisibility()).isEqualTo(DocumentVisibility.PUBLIC);
         }
     }
 
@@ -91,17 +93,42 @@ class DocumentFolderServiceTest {
     class CreateFolder {
 
         @Test
-        @DisplayName("should be created at root when parentId is null")
+        @DisplayName("should be created at root when parentId is null with PUBLIC visibility")
         void createdAtRoot() {
             given(folderRepo.existsByClinicIdAndParentIdAndName(clinicId, null, "Contratos")).willReturn(false);
             given(folderRepo.save(any())).willReturn(generalFolder);
 
-            service.createFolder(clinicId, null, "Contratos", DocumentZone.GENERAL, userId);
+            service.createFolder(clinicId, null, "Contratos", DocumentZone.GENERAL, userId, DocumentVisibility.PUBLIC);
 
             ArgumentCaptor<DocumentFolder> captor = ArgumentCaptor.forClass(DocumentFolder.class);
             verify(folderRepo).save(captor.capture());
             assertThat(captor.getValue().getParentId()).isNull();
             assertThat(captor.getValue().getZone()).isEqualTo(DocumentZone.GENERAL);
+            assertThat(captor.getValue().getVisibility()).isEqualTo(DocumentVisibility.PUBLIC);
+        }
+
+        @Test
+        @DisplayName("should be created with PRIVATE visibility when specified")
+        void createdWithPrivateVisibility() {
+            given(folderRepo.existsByClinicIdAndParentIdAndName(clinicId, null, "MisNotas")).willReturn(false);
+            given(folderRepo.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+            DocumentFolder result = service.createFolder(clinicId, null, "MisNotas",
+                    DocumentZone.GENERAL, userId, DocumentVisibility.PRIVATE);
+
+            assertThat(result.getVisibility()).isEqualTo(DocumentVisibility.PRIVATE);
+        }
+
+        @Test
+        @DisplayName("should default to PUBLIC when visibility is null")
+        void defaultsToPublicWhenNullVisibility() {
+            given(folderRepo.existsByClinicIdAndParentIdAndName(clinicId, null, "Default")).willReturn(false);
+            given(folderRepo.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+            DocumentFolder result = service.createFolder(clinicId, null, "Default",
+                    DocumentZone.GENERAL, userId, null);
+
+            assertThat(result.getVisibility()).isEqualTo(DocumentVisibility.PUBLIC);
         }
 
         @Test
@@ -109,7 +136,8 @@ class DocumentFolderServiceTest {
         void rejectedWhenNameExists() {
             given(folderRepo.existsByClinicIdAndParentIdAndName(clinicId, null, "Facturas")).willReturn(true);
 
-            assertThatThrownBy(() -> service.createFolder(clinicId, null, "Facturas", DocumentZone.GENERAL, userId))
+            assertThatThrownBy(() -> service.createFolder(clinicId, null, "Facturas",
+                    DocumentZone.GENERAL, userId, DocumentVisibility.PUBLIC))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Facturas");
 
@@ -126,7 +154,8 @@ class DocumentFolderServiceTest {
             given(folderRepo.findById(parentId)).willReturn(Optional.of(parent));
             given(folderRepo.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-            DocumentFolder child = service.createFolder(clinicId, parentId, "2024", DocumentZone.KNOWLEDGE_BASE, userId);
+            DocumentFolder child = service.createFolder(clinicId, parentId, "2024",
+                    DocumentZone.KNOWLEDGE_BASE, userId, DocumentVisibility.PUBLIC);
 
             assertThat(child.getS3Prefix()).startsWith(parent.getS3Prefix());
             assertThat(child.getS3Prefix()).contains("2024");
@@ -139,7 +168,8 @@ class DocumentFolderServiceTest {
             given(folderRepo.existsByClinicIdAndParentIdAndName(clinicId, unknownParent, "Sub")).willReturn(false);
             given(folderRepo.findById(unknownParent)).willReturn(Optional.empty());
 
-            assertThatThrownBy(() -> service.createFolder(clinicId, unknownParent, "Sub", DocumentZone.GENERAL, userId))
+            assertThatThrownBy(() -> service.createFolder(clinicId, unknownParent, "Sub",
+                    DocumentZone.GENERAL, userId, DocumentVisibility.PUBLIC))
                     .isInstanceOf(NoSuchElementException.class);
         }
     }
@@ -198,23 +228,53 @@ class DocumentFolderServiceTest {
     class ListChildren {
 
         @Test
-        @DisplayName("should return subfolders for a given parent")
-        void returnsChildren() {
+        @DisplayName("SUPER_ADMIN should see all folders regardless of visibility")
+        void superAdminSeesAll() {
             given(folderRepo.findByClinicIdAndParentId(clinicId, folderId))
                     .willReturn(List.of(generalFolder));
 
-            List<DocumentFolder> result = service.listChildren(clinicId, folderId);
+            List<DocumentFolder> result = service.listChildren(clinicId, folderId, userId, true);
 
             assertThat(result).hasSize(1);
-            assertThat(result.get(0).getName()).isEqualTo("Facturas");
+            verify(folderRepo).findByClinicIdAndParentId(clinicId, folderId);
         }
 
         @Test
-        @DisplayName("should return empty list when no subfolders exist")
-        void returnsEmpty() {
-            given(folderRepo.findByClinicIdAndParentId(clinicId, folderId)).willReturn(List.of());
+        @DisplayName("regular user should only see PUBLIC and own PRIVATE folders")
+        void regularUserSeesVisible() {
+            given(folderRepo.findVisibleByClinicIdAndParentId(clinicId, folderId, userId))
+                    .willReturn(List.of(generalFolder));
 
-            assertThat(service.listChildren(clinicId, folderId)).isEmpty();
+            List<DocumentFolder> result = service.listChildren(clinicId, folderId, userId, false);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getName()).isEqualTo("Facturas");
+            verify(folderRepo).findVisibleByClinicIdAndParentId(clinicId, folderId, userId);
+        }
+
+        @Test
+        @DisplayName("should return empty list when no visible subfolders exist")
+        void returnsEmpty() {
+            given(folderRepo.findVisibleByClinicIdAndParentId(clinicId, folderId, userId)).willReturn(List.of());
+
+            assertThat(service.listChildren(clinicId, folderId, userId, false)).isEmpty();
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    @Nested @DisplayName("visibility on ensureKnowledgeBaseRoot")
+    class KbRootVisibility {
+
+        @Test
+        @DisplayName("KB root is always created as PUBLIC")
+        void kbRootAlwaysPublic() {
+            given(folderRepo.findByClinicIdAndZone(clinicId, DocumentZone.KNOWLEDGE_BASE))
+                    .willReturn(List.of());
+            given(folderRepo.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+            DocumentFolder root = service.ensureKnowledgeBaseRoot(clinicId, userId);
+
+            assertThat(root.getVisibility()).isEqualTo(DocumentVisibility.PUBLIC);
         }
     }
 
@@ -224,6 +284,7 @@ class DocumentFolderServiceTest {
         return DocumentFolder.builder()
                 .id(id).clinicId(clinicId).parentId(parentId).name(name)
                 .s3Prefix(prefix).zone(zone).system(system)
+                .visibility(DocumentVisibility.PUBLIC)
                 .createdBy(userId).createdAt(LocalDateTime.now())
                 .build();
     }

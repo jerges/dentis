@@ -116,7 +116,16 @@ public class DocumentStepDefinitions {
         execute(post("/api/v1/documents/folders")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(
-                        Map.of("parentId", "", "name", name, "zone", "GENERAL")))
+                        Map.of("parentId", "", "name", name, "zone", "GENERAL", "visibility", "PUBLIC")))
+                .with(TenantAuthSupport.asClinicAdmin(clinicId)));
+    }
+
+    @When("documents api creates a PRIVATE GENERAL folder named {string}")
+    public void createPrivateGeneralFolder(String name) throws Exception {
+        execute(post("/api/v1/documents/folders")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(
+                        Map.of("parentId", "", "name", name, "zone", "GENERAL", "visibility", "PRIVATE")))
                 .with(TenantAuthSupport.asClinicAdmin(clinicId)));
     }
 
@@ -125,7 +134,7 @@ public class DocumentStepDefinitions {
         execute(post("/api/v1/documents/folders")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(
-                        Map.of("parentId", "", "name", name, "zone", "KNOWLEDGE_BASE")))
+                        Map.of("parentId", "", "name", name, "zone", "KNOWLEDGE_BASE", "visibility", "PUBLIC")))
                 .with(TenantAuthSupport.asClinicAdmin(clinicId)));
     }
 
@@ -166,7 +175,24 @@ public class DocumentStepDefinitions {
                         "contentType", "application/pdf",
                         "s3Key", "clinics/" + clinicId + "/general/" + UUID.randomUUID() + "-" + fileName,
                         "fileSize", 51200,
-                        "description", ""
+                        "description", "",
+                        "visibility", "PUBLIC"
+                )))
+                .with(TenantAuthSupport.asClinicAdmin(clinicId)));
+    }
+
+    @When("documents api registers a PRIVATE document {string} in that folder")
+    public void registerPrivateDocument(String fileName) throws Exception {
+        execute(post("/api/v1/documents")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of(
+                        "folderId", folderId.toString(),
+                        "fileName", fileName,
+                        "contentType", "application/pdf",
+                        "s3Key", "clinics/" + clinicId + "/general/" + UUID.randomUUID() + "-" + fileName,
+                        "fileSize", 51200,
+                        "description", "",
+                        "visibility", "PRIVATE"
                 )))
                 .with(TenantAuthSupport.asClinicAdmin(clinicId)));
     }
@@ -216,6 +242,16 @@ public class DocumentStepDefinitions {
         JsonNode node = objectMapper.readTree(lastBody);
         assertThat(node.isArray()).isTrue();
         assertThat(node.size()).isGreaterThan(0);
+    }
+
+    @And("documents response folder visibility is {string}")
+    public void responseFolderVisibilityIs(String expected) throws Exception {
+        assertThat(objectMapper.readTree(lastBody).path("visibility").asText()).isEqualTo(expected);
+    }
+
+    @And("documents document visibility is {string}")
+    public void documentVisibilityIs(String expected) throws Exception {
+        assertThat(objectMapper.readTree(lastBody).path("visibility").asText()).isEqualTo(expected);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

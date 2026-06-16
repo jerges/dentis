@@ -2,6 +2,7 @@ package com.adakadavra.dentis.documents.domain.service;
 
 import com.adakadavra.dentis.documents.domain.model.ClinicDocument;
 import com.adakadavra.dentis.documents.domain.model.DocumentFolder;
+import com.adakadavra.dentis.documents.domain.model.DocumentVisibility;
 import com.adakadavra.dentis.documents.domain.model.DocumentZone;
 import com.adakadavra.dentis.documents.domain.repository.ClinicDocumentRepository;
 import com.adakadavra.dentis.documents.domain.repository.DocumentFolderRepository;
@@ -98,13 +99,14 @@ class ClinicDocumentServiceTest {
     class Register {
 
         @Test
-        @DisplayName("should persist document with correct metadata")
+        @DisplayName("should persist document with correct metadata and PUBLIC visibility")
         void persistsDocumentWithMetadata() {
             given(folderRepo.findById(folderId)).willReturn(Optional.of(kbFolder));
             given(documentRepo.save(any())).willReturn(sampleDoc);
 
             ClinicDocument result = service.register(clinicId, folderId, "protocol.pdf",
-                    "application/pdf", "clinics/x/kb/uuid-protocol.pdf", 204800L, "Protocolo", userId);
+                    "application/pdf", "clinics/x/kb/uuid-protocol.pdf", 204800L, "Protocolo", userId,
+                    DocumentVisibility.PUBLIC);
 
             assertThat(result.getFileName()).isEqualTo("protocol.pdf");
             assertThat(result.getClinicId()).isEqualTo(clinicId);
@@ -112,6 +114,32 @@ class ClinicDocumentServiceTest {
             ArgumentCaptor<ClinicDocument> captor = ArgumentCaptor.forClass(ClinicDocument.class);
             verify(documentRepo).save(captor.capture());
             assertThat(captor.getValue().isIndexedForIa()).isFalse();
+            assertThat(captor.getValue().getVisibility()).isEqualTo(DocumentVisibility.PUBLIC);
+        }
+
+        @Test
+        @DisplayName("should persist document with PRIVATE visibility when specified")
+        void persistsWithPrivateVisibility() {
+            given(folderRepo.findById(folderId)).willReturn(Optional.of(kbFolder));
+            given(documentRepo.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+            ClinicDocument result = service.register(clinicId, folderId, "private.pdf",
+                    "application/pdf", "clinics/x/kb/uuid-private.pdf", 1024L, null, userId,
+                    DocumentVisibility.PRIVATE);
+
+            assertThat(result.getVisibility()).isEqualTo(DocumentVisibility.PRIVATE);
+        }
+
+        @Test
+        @DisplayName("should default to PUBLIC when visibility is null")
+        void defaultsToPublic() {
+            given(folderRepo.findById(folderId)).willReturn(Optional.of(kbFolder));
+            given(documentRepo.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+            ClinicDocument result = service.register(clinicId, folderId, "default.pdf",
+                    "application/pdf", "clinics/x/kb/uuid-default.pdf", 1024L, null, userId, null);
+
+            assertThat(result.getVisibility()).isEqualTo(DocumentVisibility.PUBLIC);
         }
 
         @Test
@@ -121,7 +149,7 @@ class ClinicDocumentServiceTest {
             given(folderRepo.findById(folderId)).willReturn(Optional.of(kbFolder));
 
             assertThatThrownBy(() -> service.register(otherClinic, folderId, "f.pdf",
-                    "application/pdf", "key", 0L, null, userId))
+                    "application/pdf", "key", 0L, null, userId, DocumentVisibility.PUBLIC))
                     .isInstanceOf(IllegalStateException.class);
 
             verify(documentRepo, never()).save(any());
@@ -133,15 +161,28 @@ class ClinicDocumentServiceTest {
     class ListByFolder {
 
         @Test
-        @DisplayName("should return documents in folder")
-        void returnsDocuments() {
+        @DisplayName("SUPER_ADMIN should see all documents including PRIVATE")
+        void superAdminSeesAll() {
             given(folderRepo.findById(folderId)).willReturn(Optional.of(kbFolder));
             given(documentRepo.findByFolderId(folderId)).willReturn(List.of(sampleDoc));
 
-            List<ClinicDocument> result = service.listByFolder(folderId, clinicId);
+            List<ClinicDocument> result = service.listByFolder(folderId, clinicId, userId, true);
+
+            assertThat(result).hasSize(1);
+            verify(documentRepo).findByFolderId(folderId);
+        }
+
+        @Test
+        @DisplayName("regular user should only see PUBLIC and own PRIVATE documents")
+        void regularUserSeesVisible() {
+            given(folderRepo.findById(folderId)).willReturn(Optional.of(kbFolder));
+            given(documentRepo.findVisibleByFolderId(folderId, userId)).willReturn(List.of(sampleDoc));
+
+            List<ClinicDocument> result = service.listByFolder(folderId, clinicId, userId, false);
 
             assertThat(result).hasSize(1);
             assertThat(result.get(0).getFileName()).isEqualTo("protocol.pdf");
+            verify(documentRepo).findVisibleByFolderId(folderId, userId);
         }
 
         @Test
@@ -150,7 +191,7 @@ class ClinicDocumentServiceTest {
             UUID otherClinic = UUID.randomUUID();
             given(folderRepo.findById(folderId)).willReturn(Optional.of(kbFolder));
 
-            assertThatThrownBy(() -> service.listByFolder(folderId, otherClinic))
+            assertThatThrownBy(() -> service.listByFolder(folderId, otherClinic, userId, false))
                     .isInstanceOf(IllegalStateException.class);
         }
     }
@@ -160,22 +201,33 @@ class ClinicDocumentServiceTest {
     class Search {
 
         @Test
-        @DisplayName("should delegate full-text search to repository")
-        void delegatesToRepository() {
+        @DisplayName("SUPER_ADMIN should search all documents")
+        void superAdminSearchesAll() {
             given(documentRepo.search(clinicId, "protocolo")).willReturn(List.of(sampleDoc));
 
-            List<ClinicDocument> result = service.search(clinicId, "protocolo");
+            List<ClinicDocument> result = service.search(clinicId, "protocolo", userId, true);
 
             assertThat(result).hasSize(1);
             verify(documentRepo).search(clinicId, "protocolo");
         }
 
         @Test
+        @DisplayName("regular user should search only visible documents")
+        void regularUserSearchesVisible() {
+            given(documentRepo.searchVisible(clinicId, "protocolo", userId)).willReturn(List.of(sampleDoc));
+
+            List<ClinicDocument> result = service.search(clinicId, "protocolo", userId, false);
+
+            assertThat(result).hasSize(1);
+            verify(documentRepo).searchVisible(clinicId, "protocolo", userId);
+        }
+
+        @Test
         @DisplayName("should return empty list when no results")
         void returnsEmpty() {
-            given(documentRepo.search(clinicId, "xyz")).willReturn(List.of());
+            given(documentRepo.searchVisible(clinicId, "xyz", userId)).willReturn(List.of());
 
-            assertThat(service.search(clinicId, "xyz")).isEmpty();
+            assertThat(service.search(clinicId, "xyz", userId, false)).isEmpty();
         }
     }
 
@@ -221,11 +273,21 @@ class ClinicDocumentServiceTest {
     class IsKnowledgeBaseFolder {
 
         @Test
-        @DisplayName("should return true for KB zone folder")
-        void trueForKbFolder() {
+        @DisplayName("should return true for PUBLIC KB zone folder")
+        void trueForPublicKbFolder() {
             given(folderRepo.findById(folderId)).willReturn(Optional.of(kbFolder));
 
             assertThat(service.isKnowledgeBaseFolder(folderId)).isTrue();
+        }
+
+        @Test
+        @DisplayName("should return false for PRIVATE KB folder (IA must not index it)")
+        void falseForPrivateKbFolder() {
+            DocumentFolder privateKb = buildFolder(folderId, clinicId, DocumentZone.KNOWLEDGE_BASE,
+                    DocumentVisibility.PRIVATE);
+            given(folderRepo.findById(folderId)).willReturn(Optional.of(privateKb));
+
+            assertThat(service.isKnowledgeBaseFolder(folderId)).isFalse();
         }
 
         @Test
@@ -262,12 +324,18 @@ class ClinicDocumentServiceTest {
 
     // ─────────────────────────────────────────────────────────────────────────
     private DocumentFolder buildFolder(UUID id, UUID clinicId, DocumentZone zone) {
+        return buildFolder(id, clinicId, zone, DocumentVisibility.PUBLIC);
+    }
+
+    private DocumentFolder buildFolder(UUID id, UUID clinicId, DocumentZone zone,
+                                        DocumentVisibility visibility) {
         String prefix = "clinics/" + clinicId + "/" + zone.name().toLowerCase() + "/";
         return DocumentFolder.builder()
                 .id(id).clinicId(clinicId).parentId(null)
                 .name(zone == DocumentZone.KNOWLEDGE_BASE ? "Base de Conocimiento IA" : "General")
                 .s3Prefix(prefix).zone(zone)
                 .system(zone == DocumentZone.KNOWLEDGE_BASE)
+                .visibility(visibility)
                 .createdBy(userId).createdAt(LocalDateTime.now())
                 .build();
     }
@@ -281,6 +349,7 @@ class ClinicDocumentServiceTest {
                 .fileSize(102400L).description(null)
                 .uploadedBy(userId).uploadedAt(LocalDateTime.now())
                 .indexedForIa(false)
+                .visibility(DocumentVisibility.PUBLIC)
                 .build();
     }
 }
