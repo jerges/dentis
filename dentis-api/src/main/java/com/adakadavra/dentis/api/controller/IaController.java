@@ -234,26 +234,36 @@ public class IaController {
         List<IaUserStats> rows;
         long totalSessions;
 
+        IaProperties.ModelPricing rowPricing = props.resolvePricing(props.getGenerationModelId());
+
         if (isSuperAdmin) {
             rows = sessionJpaRepo.getUsageAll().stream()
-                    .map(r -> new IaUserStats(
-                            (String) r[0],
-                            (String) r[1],
-                            toLong(r[2]),
-                            toLong(r[3]),
-                            toLong(r[4])))
+                    .map(r -> {
+                        long in = toLong(r[3]), out = toLong(r[4]);
+                        return new IaUserStats(
+                                (String) r[0],
+                                (String) r[1],
+                                toLong(r[2]),
+                                in,
+                                out,
+                                rowPricing.billedCost(in, out));
+                    })
                     .toList();
             totalSessions = sessionJpaRepo.count();
         } else {
             UUID clinicId = tenantSecurity.currentClinicId()
                     .orElseThrow(() -> new IllegalStateException("No clinic context"));
             rows = sessionJpaRepo.getUsageByClinic(clinicId).stream()
-                    .map(r -> new IaUserStats(
-                            (String) r[0],
-                            null,
-                            toLong(r[1]),
-                            toLong(r[2]),
-                            toLong(r[3])))
+                    .map(r -> {
+                        long msg = toLong(r[1]), in = toLong(r[2]), out = toLong(r[3]);
+                        return new IaUserStats(
+                                (String) r[0],
+                                null,
+                                msg,
+                                in,
+                                out,
+                                rowPricing.billedCost(in, out));
+                    })
                     .toList();
             totalSessions = sessionJpaRepo.countByClinicId(clinicId);
         }
@@ -279,7 +289,7 @@ public class IaController {
 
     public record CreateSessionRequest(String title, UUID clinicId) {}
     public record SendMessageRequest(@NotBlank String content) {}
-    public record IaUserStats(String username, String clinicName, long messages, long inputTokens, long outputTokens) {}
+    public record IaUserStats(String username, String clinicName, long messages, long inputTokens, long outputTokens, double billedCostUsd) {}
     public record IaStatsResponse(long totalSessions, long totalMessages, long totalInputTokens, long totalOutputTokens,
                                   double totalRawCostUsd, double totalBilledCostUsd, List<IaUserStats> rows) {}
 }

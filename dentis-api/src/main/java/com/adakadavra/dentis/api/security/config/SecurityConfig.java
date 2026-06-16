@@ -39,6 +39,10 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC_PATHS).permitAll()
+                        .requestMatchers("/actuator/prometheus", "/actuator/metrics/**")
+                            .hasRole("SUPER_ADMIN")
+                        .requestMatchers("/actuator/**")
+                            .hasAnyRole("SUPER_ADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/v1/**")
                             .hasAnyRole("SUPER_ADMIN", "ADMIN", "USER")
                         .requestMatchers("/api/v1/clinics/**")

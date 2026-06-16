@@ -35,6 +35,7 @@ export interface IaUserStats {
   messages: number;
   inputTokens: number;
   outputTokens: number;
+  billedCostUsd: number;
 }
 
 export interface IaStatsResponse {
@@ -42,5 +43,7 @@ export interface IaStatsResponse {
   totalMessages: number;
   totalInputTokens: number;
   totalOutputTokens: number;
+  totalRawCostUsd: number;
+  totalBilledCostUsd: number;
   rows: IaUserStats[];
 }

@@ -56,9 +56,16 @@ Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip, L
           </mat-card>
           <mat-card class="kpi-card">
             <mat-icon class="kpi-icon c-green">attach_money</mat-icon>
-            <div class="kpi-value c-green">\${{ estimatedCost() | number:'1.4-4' }}</div>
-            <div class="kpi-label">Coste estimado</div>
+            <div class="kpi-value c-green">\${{ stats()!.totalBilledCostUsd | number:'1.4-4' }}</div>
+            <div class="kpi-label">Facturación</div>
           </mat-card>
+          @if (isSuperAdmin) {
+            <mat-card class="kpi-card">
+              <mat-icon class="kpi-icon c-red">payments</mat-icon>
+              <div class="kpi-value c-red">\${{ stats()!.totalRawCostUsd | number:'1.4-4' }}</div>
+              <div class="kpi-label">Coste real (AWS)</div>
+            </mat-card>
+          }
         </div>
 
         @if (stats()!.rows.length > 0) {
@@ -100,8 +107,8 @@ Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip, L
                   <td mat-cell *matCellDef="let row" class="num-col">{{ row.outputTokens | number }}</td>
                 </ng-container>
                 <ng-container matColumnDef="cost">
-                  <th mat-header-cell *matHeaderCellDef class="num-col">Coste est.</th>
-                  <td mat-cell *matCellDef="let row" class="num-col">\${{ rowCost(row) | number:'1.4-4' }}</td>
+                  <th mat-header-cell *matHeaderCellDef class="num-col">Facturación</th>
+                  <td mat-cell *matCellDef="let row" class="num-col">\${{ row.billedCostUsd | number:'1.4-4' }}</td>
                 </ng-container>
                 <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
                 <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
@@ -140,6 +147,7 @@ Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip, L
     .c-teal   { color: #0d9488; }
     .c-amber  { color: #f59e0b; }
     .c-green  { color: #10b981; }
+    .c-red    { color: #ef4444; }
     .kpi-value { font-size: 26px; font-weight: 800; line-height: 1.1; }
     .kpi-label { font-size: 12px; opacity: .6; margin-top: 4px; font-weight: 500; }
     .chart-card, .table-card { border-radius: 16px !important; margin-bottom: 24px; }
@@ -199,16 +207,6 @@ export class IaStatsComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.chart?.destroy();
-  }
-
-  estimatedCost(): number {
-    const s = this.stats();
-    if (!s) return 0;
-    return (s.totalInputTokens / 1000 * 0.0008) + (s.totalOutputTokens / 1000 * 0.0032);
-  }
-
-  rowCost(row: IaUserStats): number {
-    return (row.inputTokens / 1000 * 0.0008) + (row.outputTokens / 1000 * 0.0032);
   }
 
   private renderChart(s: IaStatsResponse): void {
