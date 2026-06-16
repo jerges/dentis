@@ -32,6 +32,8 @@ Cobertura de código y calidad de tests
 Usa el @DisplayName para mejorar la legibilidad de los tests
 Convención de nombres: Todos los métodos de test deben comenzar con shouldBe seguido de la descripción del
 comportamiento esperado
+Al terminar de implementar el código siempre ejecuta los test para garantizar que no se rompe nada y si no hay test
+crealos, aplicando TDD
 Enfoque:
 
 Proporciona soluciones siguiendo mejores prácticas
