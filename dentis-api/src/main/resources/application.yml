@@ -46,8 +46,6 @@ spring:
         distance-type: COSINE_DISTANCE
         dimensions: 1024
         table-name: ia_documents
-
-spring:
   threads:
     virtual:
       enabled: true

@@ -13,6 +13,7 @@ public interface AgentPort {
     sealed interface AgentEvent {
         record Token(String text) implements AgentEvent {}
         record ToolEvent(String toolName, String status, String label) implements AgentEvent {}
+        record ThinkingChunk(String text) implements AgentEvent {}
     }
 
     record AgentRequest(

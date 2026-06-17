@@ -67,6 +67,11 @@ public class IaChatService {
                 .build());
 
         List<ChatMessage> history = messageRepo.findBySessionIdOrderByCreatedAt(sessionId);
+
+        if (history.size() == 1) {
+            String autoTitle = userText.length() > 60 ? userText.substring(0, 60).stripTrailing() + "…" : userText;
+            sessionRepo.save(session.withTitle(autoTitle).withUpdatedAt(LocalDateTime.now()));
+        }
         List<AgentPort.ConversationTurn> turns = history.stream()
                 .filter(m -> !m.getContent().equals(RelevanceGuard.OFF_TOPIC_RESPONSE))
                 .map(m -> new AgentPort.ConversationTurn(m.getRole(), m.getContent()))

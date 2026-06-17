@@ -10,10 +10,12 @@ interface ApiResponse<T> {
   message?: string;
 }
 
-export interface SseToken   { t: string }
-export interface SseDone    { done: true; usage: { input_tokens: number; output_tokens: number; cost_usd: number } }
-export interface SseError   { err: string }
-export type SseEvent = SseToken | SseDone | SseError;
+export interface SseToken    { t: string }
+export interface SseDone     { done: true; usage: { input_tokens: number; output_tokens: number; cost_usd: number } }
+export interface SseError    { err: string }
+export interface SseThinking { thinking: string }
+export interface SseTool     { tool: string; status: string; label: string }
+export type SseEvent = SseToken | SseDone | SseError | SseThinking | SseTool;
 
 @Injectable({ providedIn: 'root' })
 export class IaService {

@@ -136,6 +136,8 @@ public class IaController {
                         event -> {
                             if (event instanceof AgentPort.AgentEvent.Token(String text)) {
                                 sseSend(emitter, toJson(java.util.Map.of("t", text)));
+                            } else if (event instanceof AgentPort.AgentEvent.ThinkingChunk(String text)) {
+                                sseSend(emitter, toJson(java.util.Map.of("thinking", text)));
                             } else if (event instanceof AgentPort.AgentEvent.ToolEvent toolEvent) {
                                 sseSend(emitter, toJson(java.util.Map.of(
                                         "tool",   toolEvent.toolName(),

@@ -1,17 +1,14 @@
 package com.adakadavra.dentis.ia.agent.dental;
 
-import com.adakadavra.dentis.ia.agent.AgentPort;
 import com.adakadavra.dentis.ia.agent.AgentType;
 import com.adakadavra.dentis.ia.agent.BaseAgent;
 import com.adakadavra.dentis.ia.agent.tool.AgentTool;
-import com.adakadavra.dentis.ia.domain.service.RelevanceGuard;
 import com.adakadavra.dentis.ia.infrastructure.config.IaProperties;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeAsyncClient;
 
 import java.util.List;
-import java.util.function.Consumer;
 
 @Component
 public class DentalAgent extends BaseAgent {
@@ -33,24 +30,11 @@ public class DentalAgent extends BaseAgent {
             6. Mantén un tono profesional y clínico.
             """;
 
-    private final RelevanceGuard relevanceGuard;
-
     public DentalAgent(BedrockRuntimeAsyncClient asyncClient,
                        VectorStore vectorStore,
                        IaProperties props,
-                       RelevanceGuard relevanceGuard,
                        List<AgentTool> tools) {
         super(asyncClient, vectorStore, props, tools);
-        this.relevanceGuard = relevanceGuard;
-    }
-
-    @Override
-    public AgentResponse streamAsk(AgentRequest req, Consumer<AgentEvent> onEvent) {
-        if (!relevanceGuard.isRelevant(req.userText())) {
-            onEvent.accept(new AgentEvent.Token(RelevanceGuard.OFF_TOPIC_RESPONSE));
-            return new AgentResponse(RelevanceGuard.OFF_TOPIC_RESPONSE, 0, 0, null);
-        }
-        return super.streamAsk(req, onEvent);
     }
 
     @Override

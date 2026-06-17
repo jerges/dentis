@@ -1,9 +1,7 @@
 package com.adakadavra.dentis.ia.agent.dental;
 
 import com.adakadavra.dentis.ia.agent.AgentPort;
-import com.adakadavra.dentis.ia.agent.AgentPort.AgentEvent;
 import com.adakadavra.dentis.ia.agent.AgentPort.AgentRequest;
-import com.adakadavra.dentis.ia.domain.service.RelevanceGuard;
 import com.adakadavra.dentis.ia.infrastructure.config.IaProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -17,7 +15,6 @@ import org.springframework.ai.vectorstore.VectorStore;
 import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeAsyncClient;
 import software.amazon.awssdk.services.bedrockruntime.model.ConverseStreamRequest;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -39,25 +36,7 @@ class DentalAgentTest {
     @BeforeEach
     void setUp() {
         props = new IaProperties();
-        agent = new DentalAgent(asyncClient, vectorStore, props, new RelevanceGuard(), List.of());
-    }
-
-    // ── Relevance guard ───────────────────────────────────────────────────────
-
-    @Test
-    @DisplayName("shouldBeGuardedWhenOffTopicQueryIsReceived")
-    void shouldBeGuardedWhenOffTopicQueryIsReceived() {
-        var req = new AgentRequest(UUID.randomUUID(), null, "¿Cuál es la capital de Francia?", List.of());
-        List<AgentEvent> received = new ArrayList<>();
-
-        AgentPort.AgentResponse response = agent.streamAsk(req, received::add);
-
-        assertThat(response.text()).isEqualTo(RelevanceGuard.OFF_TOPIC_RESPONSE);
-        assertThat(received).hasSize(1);
-        assertThat(received.get(0)).isInstanceOf(AgentEvent.Token.class);
-        assertThat(((AgentEvent.Token) received.get(0)).text()).isEqualTo(RelevanceGuard.OFF_TOPIC_RESPONSE);
-        assertThat(response.inputTokens()).isZero();
-        verifyNoInteractions(asyncClient);
+        agent = new DentalAgent(asyncClient, vectorStore, props, List.of());
     }
 
     @Test

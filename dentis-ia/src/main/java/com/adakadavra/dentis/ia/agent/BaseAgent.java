@@ -57,6 +57,8 @@ public abstract class BaseAgent implements AgentPort {
 
         for (int turn = 0; turn < MAX_TOOL_TURNS; turn++) {
             var textBuf     = new StringBuilder();
+            var tagBuf      = new StringBuilder(); // accumulates text for <thinking> tag detection
+            var inThinking  = new boolean[]{false};
             var stopReason  = new String[]{"end_turn"};
             var inputTok    = new int[]{0};
             var outputTok   = new int[]{0};
@@ -84,8 +86,7 @@ public abstract class BaseAgent implements AgentPort {
                     .onContentBlockDelta(e -> {
                         var delta = e.delta();
                         if (delta.text() != null && !delta.text().isEmpty()) {
-                            textBuf.append(delta.text());
-                            onEvent.accept(new AgentEvent.Token(delta.text()));
+                            processTextChunk(delta.text(), textBuf, tagBuf, inThinking, onEvent);
                         } else if (delta.toolUse() != null && delta.toolUse().input() != null && currentTool[0] != null) {
                             currentTool[0].inputJson().append(delta.toolUse().input());
                         }
@@ -116,6 +117,7 @@ public abstract class BaseAgent implements AgentPort {
                 log.error("[bedrock-stream] failed model={}: {}", props.getGenerationModelId(), e.getMessage());
                 throw new RuntimeException("Bedrock streaming failed: " + e.getMessage(), e);
             }
+            flushTagBuf(tagBuf, textBuf, inThinking, onEvent);
 
             totalInputTok[0]  += inputTok[0];
             totalOutputTok[0] += outputTok[0];
@@ -305,6 +307,74 @@ public abstract class BaseAgent implements AgentPort {
                 .distinct()
                 .collect(Collectors.joining(","));
         return citations.isBlank() ? null : citations;
+    }
+
+    // ── Thinking stream parser ────────────────────────────────────────────────
+
+    private static final String THINKING_OPEN  = "<thinking>";
+    private static final String THINKING_CLOSE = "</thinking>";
+
+    private void processTextChunk(String chunk, StringBuilder textBuf, StringBuilder tagBuf,
+                                   boolean[] inThinking, Consumer<AgentEvent> onEvent) {
+        tagBuf.append(chunk);
+        String pending = tagBuf.toString();
+
+        while (!pending.isEmpty()) {
+            if (!inThinking[0]) {
+                int idx = pending.indexOf(THINKING_OPEN);
+                if (idx == -1) {
+                    int lastAngle = pending.lastIndexOf('<');
+                    if (lastAngle >= 0 && THINKING_OPEN.startsWith(pending.substring(lastAngle))) {
+                        String safe = pending.substring(0, lastAngle);
+                        if (!safe.isEmpty()) { textBuf.append(safe); onEvent.accept(new AgentEvent.Token(safe)); }
+                        pending = pending.substring(lastAngle);
+                        break;
+                    }
+                    textBuf.append(pending);
+                    onEvent.accept(new AgentEvent.Token(pending));
+                    pending = "";
+                    break;
+                }
+                String before = pending.substring(0, idx);
+                if (!before.isEmpty()) { textBuf.append(before); onEvent.accept(new AgentEvent.Token(before)); }
+                pending = pending.substring(idx + THINKING_OPEN.length());
+                inThinking[0] = true;
+            } else {
+                int idx = pending.indexOf(THINKING_CLOSE);
+                if (idx == -1) {
+                    int lastAngle = pending.lastIndexOf('<');
+                    if (lastAngle >= 0 && THINKING_CLOSE.startsWith(pending.substring(lastAngle))) {
+                        String safe = pending.substring(0, lastAngle);
+                        if (!safe.isEmpty()) onEvent.accept(new AgentEvent.ThinkingChunk(safe));
+                        pending = pending.substring(lastAngle);
+                        break;
+                    }
+                    if (!pending.isEmpty()) onEvent.accept(new AgentEvent.ThinkingChunk(pending));
+                    pending = "";
+                    break;
+                }
+                String thinkText = pending.substring(0, idx);
+                if (!thinkText.isEmpty()) onEvent.accept(new AgentEvent.ThinkingChunk(thinkText));
+                pending = pending.substring(idx + THINKING_CLOSE.length());
+                inThinking[0] = false;
+            }
+        }
+
+        tagBuf.setLength(0);
+        tagBuf.append(pending);
+    }
+
+    private void flushTagBuf(StringBuilder tagBuf, StringBuilder textBuf,
+                              boolean[] inThinking, Consumer<AgentEvent> onEvent) {
+        String remaining = tagBuf.toString();
+        if (remaining.isEmpty()) return;
+        if (inThinking[0]) {
+            onEvent.accept(new AgentEvent.ThinkingChunk(remaining));
+        } else {
+            textBuf.append(remaining);
+            onEvent.accept(new AgentEvent.Token(remaining));
+        }
+        tagBuf.setLength(0);
     }
 
     // ── Internal record ───────────────────────────────────────────────────────
